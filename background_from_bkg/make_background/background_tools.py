@@ -1,4 +1,4 @@
-from .makeBackground import findData_mimic
+from .make_background import findData_mimic
 from gammapy.data import DataStore
 from gammapy.irf import Background2D
 from multiprocess import Pool, cpu_count
