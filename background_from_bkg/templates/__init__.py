@@ -1,3 +1,9 @@
 from .config import config
+import yaml
 
-__all__ = ["config"]
+
+def get_config():
+    return yaml.safe_load(config)
+
+
+__all__ = ["config", "get_config"]
