@@ -83,11 +83,13 @@ class LocationFaker:
         overwrite       : bool
             whether or not to overwrite output_name (default False, do not overwrite)
         copy_background : bool
-            whether or not to copy the background from source_file (default False, output_name contains faked_file's background)
+            whether or not to copy the background from source_file
+            (default False, output_name contains faked_file's background)
         scramble_point  : list[astropy skycoordinates]
             Points to be scrambled (default None)
         scramble_theta  : float or list[float]
-            Radius of the region to be scrambled and half width of anulus region of scrambling (r_outter - r_inner = 2 * scramble_theta)
+            Radius of the region to be scrambled and half width of anulus region of scrambling
+            (r_outter - r_inner = 2 * scramble_theta)
 
 
 
@@ -218,9 +220,12 @@ class LocationFaker:
             scramble_theta = [scramble_theta] * len(scramble_source)
         else:
             if len(scramble_theta) != len(scramble_source):
-                raise TypeError(
-                    f"Expecting scramble_source and scramble theta to be of equal length \n({len(scramble_source)}, {len(scramble_theta)})"
+
+                err_str = (
+                    "Expecting scramble_source and scramble theta to be of equal length"
                 )
+                err_str += f"\n({len(scramble_source)}, {len(scramble_theta)})"
+                raise TypeError(err_str)
 
         dists = []
         rnd_angs = []

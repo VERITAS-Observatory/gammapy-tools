@@ -7,7 +7,8 @@ from gammapy.data import DataStore
 
 
 def prepare_dataset(config):
-    """Prepare a dataset for analysis. Extract runs of interest from an existing datastore, reporting any missing runs.
+    """Prepare a dataset for analysis. Extract runs of interest from an existing datastore,
+    reporting any missing runs.
 
     Parameters
     ----------

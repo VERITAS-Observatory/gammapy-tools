@@ -22,7 +22,7 @@ from gammapy.maps import MapAxis
 # V2DL3 stuff
 from pyV2DL3.generateObsHduIndex import create_obs_hdu_index_file
 
-from .BackgroundModelEstimator import BackgroundModelEstimator
+from .background_models import BackgroundModelEstimator
 
 
 def getObsDetails(hdul):
@@ -225,8 +225,9 @@ def get_background_for_run(parms) -> (str, list):
     in_file = os.path.join(in_dir, file_path, file_name)
     # print (in_file, file_path, file_name)
     with fits.open(in_file) as hdul:
-        # try/catch should only trigger if run is outside of epoch definitions or we have a major issue withe the DL3 file
-        # ToDo: Better error exitingt
+        # try/catch should only trigger if run is outside of epoch definitions
+        # or we have a major issue with the DL3 file
+        # ToDo: Better error exiting
         # try :
 
         if "bkg_runlist" not in config["background_selection"]:
@@ -312,7 +313,8 @@ def generate_background_from_run(parms) -> str:
     in_file = os.path.join(in_dir, file_path, file_name)
 
     with fits.open(in_file) as hdul:
-        # try/catch should only trigger if run is outside of epoch definitions or we have a major issue withe the DL3 file
+        # try/catch should only trigger if run is outside of epoch definitions
+        # or we have a major issue withe the DL3 file
         # ToDo: Better error exiting
         # try :
         # except Exception as e:
@@ -366,7 +368,8 @@ def write_index_files(config):
 
 
 def attach_bkg(parms):
-    # this function is only used to append background files you already have (i.e., not from the mega store) - not sure how useful this is??
+    # this function is only used to append background files you already have
+    # (i.e., not from the mega store) - not sure how useful this is??
     obs_id, config = parms
     bkg_dir = config["io"]["out_dir"]
     dl3_dir = config["io"]["in_dir"]
@@ -425,8 +428,8 @@ def attach_bkg(parms):
 
     hdul_new = fits.HDUList()
     for index, hdu in enumerate(hdu_list):
-        ## remove BKG and replace by new one
-        if index > 0:  ### first index not containing EXTNAME
+        # remove BKG and replace by new one
+        if index > 0:  # first index not containing EXTNAME
             if delete_prior_bkg and hdu.header["EXTNAME"] == "BKG":
                 print(index, "removed")
                 continue
