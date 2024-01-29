@@ -1,8 +1,8 @@
 import os
 import sys
-import yaml
-import numpy as np
 
+import numpy as np
+import yaml
 from gammapy.data import DataStore
 
 

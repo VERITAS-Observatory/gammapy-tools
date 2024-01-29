@@ -1,18 +1,18 @@
-import os
 import logging
-import numpy as np
-from scipy.stats import norm
+import os
 
 # %matplotlib inline
 import astropy.units as u
-from astropy.table import Table
-from astropy.coordinates import SkyCoord
-from regions import CircleSkyRegion
 import matplotlib.pyplot as plt
+import numpy as np
+from astropy.coordinates import SkyCoord
+from astropy.table import Table
 from gammapy.analysis import Analysis, AnalysisConfig
 from gammapy.datasets import MapDatasetOnOff
 from gammapy.estimators import ExcessMapEstimator
 from gammapy.makers import RingBackgroundMaker
+from regions import CircleSkyRegion
+from scipy.stats import norm
 
 log = logging.getLogger(__name__)
 

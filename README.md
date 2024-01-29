@@ -5,7 +5,7 @@ This is the public version of [gammapy-background-analysis](https://github.com/V
 
 # Installation
 
-This package requires [V2DL3](https://github.com/VERITAS-Observatory/V2DL3) and [Gammapy](https://gammapy.org/) to be installed. 
+This package requires [V2DL3](https://github.com/VERITAS-Observatory/V2DL3) and [Gammapy](https://gammapy.org/) to be installed.
 
 Gammapy (v1.1) can be installed via:
 ```
@@ -54,7 +54,7 @@ For details on working with containers see [containers.md](docs/containers.md)
 
 A number of worked examples can be found in [examples](examples).
 
-To simplify analysis, a "driver" config file is used. An example of such a config file is shown in [config_crab.yaml](config_crab.yaml), which contains 4 crab runs. 
+To simplify analysis, a "driver" config file is used. An example of such a config file is shown in [config_crab.yaml](config_crab.yaml), which contains 4 crab runs.
 
 * See [config.md](docs/config.md) for details on config files.
 * See [mimicing_data.md](docs/mimicing_data.md) for details on mimicing and scrambling data.

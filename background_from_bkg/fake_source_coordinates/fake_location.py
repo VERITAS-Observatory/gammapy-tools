@@ -1,13 +1,13 @@
 import numpy as np
+from astropy.coordinates import SkyCoord
 from astropy.io import fits
 from astropy.table import Table
-from astropy.coordinates import SkyCoord
 from scipy.interpolate import interp1d
+
 # from copy import deepcopy
 
 
 class LocationFaker:
-
     """Class to change the coordiates within a FoV
     Change camara X/Y to a different RA/Dec for a matched set of observations
 

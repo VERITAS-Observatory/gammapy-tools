@@ -1,15 +1,16 @@
 import os
-import numpy as np
 from copy import deepcopy
-from scipy.ndimage import gaussian_filter
+
+import numpy as np
 
 # Astropy stuff
 from astropy import units as u
 from astropy.table import Table
+from gammapy.catalog import SourceCatalog3HWC, SourceCatalogGammaCat
 
 # Gammapy stuff
 from gammapy.irf import Background2D
-from gammapy.catalog import SourceCatalogGammaCat, SourceCatalog3HWC
+from scipy.ndimage import gaussian_filter
 
 
 class BackgroundModelEstimator:

@@ -1,27 +1,26 @@
 import os
 import sys
-import yaml
-import numpy as np
 from multiprocessing import Pool
-from os.path import isfile, join
 from os import listdir
+from os.path import isfile, join
+
+import numpy as np
+import yaml
+from astropy import units as u
+from astropy.coordinates import SkyCoord
 
 # Astropy
 from astropy.io import fits
-from astropy.time import Time
-from astropy import units as u
-from astropy.coordinates import SkyCoord
 from astropy.table import Table, vstack
-
-# Gammapy stuff
-from gammapy.maps import MapAxis
+from astropy.time import Time
 from gammapy.data import DataStore
 from gammapy.irf import Background2D
 
+# Gammapy stuff
+from gammapy.maps import MapAxis
+
 # V2DL3 stuff
 from pyV2DL3.generateObsHduIndex import create_obs_hdu_index_file
-
-# from here
 
 from .BackgroundModelEstimator import BackgroundModelEstimator
 

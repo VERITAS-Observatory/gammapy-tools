@@ -5,9 +5,9 @@
 #
 #
 #Coosys	J2000:	eq_FK5 J2000
-#INFO	protocol=ASU	
-#INFO	request_date=2023-08-29T15:01:58	
-#INFO	request_post=https://vizier.cds.unistra.fr//viz-bin/asu-tsv	
+#INFO	protocol=ASU
+#INFO	request_date=2023-08-29T15:01:58
+#INFO	request_post=https://vizier.cds.unistra.fr//viz-bin/asu-tsv
 #-oc.form=dec
 #-out.max=unlimited
 #-out.add=_r
@@ -31,21 +31,21 @@
 #-out=_DE.icrs
 #_DE.icrs=!null
 #
-#INFO	contact=cds-question@unistra.fr	
-#INFO	version=7.32.4	
-#INFO	-out.max=unlimited	
+#INFO	contact=cds-question@unistra.fr
+#INFO	version=7.32.4
+#INFO	-out.max=unlimited
 
 #RESOURCE=yCat_1239
 #Name: I/239
 #Title: The Hipparcos and Tycho Catalogues (ESA 1997)
-#INFO	ivoid=ivo://cds.vizier/i/239	
-#INFO	publisher=CDS	
-#INFO	creator=ESA 1997	
-#INFO	related_resource=bibcode:1997HIP...C......0E	
-#INFO	landing_page=https://cdsarc.cds.unistra.fr/viz-bin/cat/I/239	
-#INFO	publication_date=2021-11-18	
-#INFO	curation_level=RESEARCH	
-#INFO	rights=https://cds.unistra.fr/vizier-org/licences_vizier.html	
+#INFO	ivoid=ivo://cds.vizier/i/239
+#INFO	publisher=CDS
+#INFO	creator=ESA 1997
+#INFO	related_resource=bibcode:1997HIP...C......0E
+#INFO	landing_page=https://cdsarc.cds.unistra.fr/viz-bin/cat/I/239
+#INFO	publication_date=2021-11-18
+#INFO	curation_level=RESEARCH
+#INFO	rights=https://cds.unistra.fr/vizier-org/licences_vizier.html
 #Coosys	H_1991.250:	ICRS
 #Table	I_239_hip_main:
 #Name: I/239/hip_main

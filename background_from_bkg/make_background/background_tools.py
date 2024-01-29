@@ -1,10 +1,11 @@
-from .make_background import findData_mimic
+import numpy as np
+from astropy.io import fits
+from astropy.table import vstack
 from gammapy.data import DataStore
 from gammapy.irf import Background2D
 from multiprocess import Pool, cpu_count
-from astropy.io import fits
-from astropy.table import vstack
-import numpy as np
+
+from .make_background import findData_mimic
 
 
 def kl_divergence(data1, data2):
