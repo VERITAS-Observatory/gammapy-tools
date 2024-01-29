@@ -25,7 +25,7 @@ from pyV2DL3.generateObsHduIndex import create_obs_hdu_index_file
 from .background_models import BackgroundModelEstimator
 
 
-def getObsDetails(hdul):
+def get_obs_details(hdul):
     """Find the run conditions
 
     Parameters
@@ -46,7 +46,7 @@ def getObsDetails(hdul):
     return zen, az, nsb
 
 
-def getEpoch(hdul) -> (float, list):
+def get_epoch(hdul) -> (float, list):
     """Find the epoch cooresponding to the run
 
     Parameters
@@ -59,7 +59,7 @@ def getEpoch(hdul) -> (float, list):
         obs_id  - Observations ID
         season  - Relevant Epoch dictionary entry
     """
-    Epochs = {
+    epochs = {
         "V4": {"tstart": Time("2000-01-01"), "tstop": Time("2009-09-13")},
         "V5": {"tstart": Time("2009-09-14"), "tstop": Time("2012-07-31")},
         "V6_2012_2013a": {"tstart": Time("2012-08-01"), "tstop": Time("2013-03-15")},
@@ -81,20 +81,20 @@ def getEpoch(hdul) -> (float, list):
     }
 
     tobs = Time(hdul[1].header["DATE-OBS"])
-    # for e in Epochs.keys():
-    #     if (Epochs[e]["tstart"] < tobs) and (Epochs[e]["tstop"] > tobs):
-    #         return Epochs[e]["tstart"], Epochs[e]["tstop"], tobs
+    # for e ine.keys():
+    #     if e[e]["tstart"] < tobs) and e[e]["tstop"] > tobs):
+    #         returne[e]["tstart"],e[e]["tstop"], tobs
     obs_id = hdul[1].header["OBS_ID"]
     season = ""
 
-    for key, value in Epochs.items():
+    for key, value in epochs.items():
         if (tobs.iso > value["tstart"]) & (tobs.iso <= value["tstop"]):
-            season = Epochs[key]
+            season = epochs[key]
     # to do: add error catching in case the time specified is outside of the VERITAS epochs
     return tobs, obs_id, season
 
 
-def findData_mimic(hdul, config, obs_table) -> (list, float):
+def find_data_mimic(hdul, config, obs_table) -> (list, float):
     """Find background data from an obs_table
 
     Parameters
@@ -111,7 +111,7 @@ def findData_mimic(hdul, config, obs_table) -> (list, float):
 
     """
     try:
-        tobs, obs_id, season = getEpoch(hdul)
+        tobs, obs_id, season = get_epoch(hdul)
 
     # Should only happen if there is an issue with the dl3 file...
     # Todo: better handle here
@@ -123,7 +123,7 @@ def findData_mimic(hdul, config, obs_table) -> (list, float):
 
     # obs_table = DataStore.from_dir(config["io"]["search_datastore"]).obs_table
 
-    zen_obs, az_obs, nsb_obs = getObsDetails(hdul)
+    zen_obs, az_obs, nsb_obs = get_obs_details(hdul)
     el_obs = np.deg2rad(90 - zen_obs)
 
     obs_date = Time(obs_table["DATE-AVG"])
@@ -234,7 +234,7 @@ def get_background_for_run(parms) -> (str, list):
             config["background_selection"]["bkg_runlist"] = {}
 
         if obs not in config["background_selection"]["bkg_runlist"]:
-            data_mask, livetime = findData_mimic(hdul, config, mega_table)
+            data_mask, livetime = find_data_mimic(hdul, config, mega_table)
             if livetime < 10:
                 print(obs, livetime)
             obs_list = mega_table[data_mask]["OBS_ID"]
@@ -477,7 +477,7 @@ def get_mimic_for_run(parms):
 
     in_file = os.path.join(in_dir, dl3_file_fmt.format(runid=obs))
     with fits.open(in_file) as hdul:
-        data_mask, livetime = findData_mimic(hdul, config)
+        data_mask, livetime = find_data_mimic(hdul, config)
 
         if livetime < 10:
             print(obs, livetime)
