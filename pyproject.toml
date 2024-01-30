@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools", "setuptools_scm[toml]"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages=["gammapy_tools", "gammapy_tools.make_background", "gammapy_tools.fake_source_coordinates", "gammapy_tools.templates"]
+
+[tool.setuptools_scm]
+write_to = "gammapy_tools/_version.py"
+
+[project]
+name = "gammapy_tools"
+dynamic = ["version"]
+description = "VERITAS (VEGAS and Eventdisplay) to DL3 Converter"
+readme = "README.md"
+license = { file="LICENSE" }
+
+requires-python = "~=3.10"
+dependencies = [
+    "pyyaml",
+    "numpy",
+    "astropy<6.0.0",
+    "pymysql",
+    "pandas",
+    "tqdm",
+    "matplotlib",
+    "multiprocess",
+    "gammapy==1.1",
+    "pydantic<=1.10",
+    "scipy==1.11.4",
+]
+
+[project.optional-dependencies]
+"tests" = [
+    "pytest",
+    "pytest-cov",
+]
+
+[project.urls]
+#"documentation" = "https://github.com/VERITAS-Observatory/gammapy-tools/"
+#"repository" = "https://github.com/VERITAS-Observatory/gammapy-tools/"
+#"bug tracker" = "https://github.com/VERITAS-Observatory/gammapy-tools/issues"
+
+[project.scripts]
+
+[tool.commitizen]
+version = "0.1.1"  # This should be your current semver version

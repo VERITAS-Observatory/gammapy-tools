@@ -1,0 +1,8 @@
+pyyaml
+numpy
+astropy
+pymysql
+pandas
+tqdm
+matplotlib
+multiprocess
