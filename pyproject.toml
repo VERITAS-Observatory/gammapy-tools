@@ -44,4 +44,4 @@ dependencies = [
 [project.scripts]
 
 [tool.commitizen]
-version = "0.1.0"  # This should be your current semver version
+version = "0.1.1"  # This should be your current semver version
