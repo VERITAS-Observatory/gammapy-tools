@@ -2,13 +2,13 @@
 
 "Mimicing" data is when a background run is modified such that it appears to be an observations taken on a FoV of interest.
 
-To first order mimicing simply involves converting the coordinates of events in background run to the coordinates of the FoV of interest. This is is handled by the [`LocationFaker`](background_from_bkg/fake_source_coordinates/fake_location.py) class.
+To first order mimicing simply involves converting the coordinates of events in background run to the coordinates of the FoV of interest. This is is handled by the [`LocationFaker`](../gammapy_tools/fake_source_coordinates/fake_location.py) class.
 
 
 To do this we require two DL3 files for `target` and `faked` observations. The `target` is the real observation that we'd like to investigate for possible systematic effects. The `faked` observation is a background run that closely resembles the observing conditions of the `target` observation. Given two runs we can generate mimiced data using the following:
 
 ```python
-from background_from_bkg.fake_source_coordinates import LocationFaker
+from gammapy_tools.fake_source_coordinates import LocationFaker
 
 
 # Two exisiting observatiosn
