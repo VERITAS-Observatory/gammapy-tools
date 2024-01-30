@@ -37,11 +37,11 @@ dependencies = [
 ]
 
 [project.urls]
-#"documentation" = "https://github.com/VERITAS-Observatory/V2DL3/"
-#"repository" = "https://github.com/VERITAS-Observatory/V2DL3/"
-#"bug tracker" = "https://github.com/VERITAS-Observatory/V2DL3/issues"
+#"documentation" = "https://github.com/VERITAS-Observatory/gammapy-tools/"
+#"repository" = "https://github.com/VERITAS-Observatory/gammapy-tools/"
+#"bug tracker" = "https://github.com/VERITAS-Observatory/gammapy-tools/issues"
 
 [project.scripts]
-#v2dl3-vegas = "pyV2DL3.script.v2dl3_for_vegas:cli"
-#v2dl3-generate-index-file = "pyV2DL3.script.generate_index_file:cli"
-#v2dl3-eventdisplay = "pyV2DL3.script.v2dl3_for_Eventdisplay:cli"
+
+[tool.commitizen]
+version = "0.1.0"  # This should be your current semver version

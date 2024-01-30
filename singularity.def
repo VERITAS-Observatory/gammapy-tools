@@ -18,13 +18,12 @@ Stage: build
     #./config_crab.yaml /gamma-tools/tmp_build
     
     # Adding the star catalogs 
-    ./gammapy_tools/Hipparcos_MAG8_1997.dat /gamma-tools/gammapy-datasets/catalogs/Hipparcos_MAG8_1997.dat
+    ./gammapy_tools/Hipparcos_MAG8_1997.dat /gamma-tools/gammapy-datasets/1.1/catalogs/Hipparcos_MAG8_1997.dat
 
 %environment
     # Port for jupyter lab
     export JPORT=8000
-    export GAMMAPY_DATA=/gamma-tools/gammapy-datasets/
-
+    export GAMMAPY_DATA=/gamma-tools/gammapy-datasets/1.1/
     . "/opt/conda/etc/profile.d/conda.sh"
     . /opt/conda/bin/activate 
     
@@ -60,6 +59,11 @@ Stage: build
     cd /gamma-tools/tmp_build/gammapy-tools
     #pip install -r requirements.txt
     pip install .
+
+
+    # Install gammapy-datasets
+    cd /gamma-tools/
+    gammapy download datasets
 
     cd /gamma-tools ; rm -r /gamma-tools/tmp_build
 
