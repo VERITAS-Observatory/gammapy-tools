@@ -1,0 +1,42 @@
+---
+source:
+    source_name : "Crab"
+    source_ra : 83.6287500
+    source_dec : 22.0123611
+    use_name : False
+io: 
+    from_runlist: True
+    runlist: "/raid/romulus/swong/ED490/Eventdisplay_AnalysisScripts_VTS/scripts/crab07wob.txt"
+    search_datastore : "/raid/romulus/swong/MegaStore/moderate2tel/"
+    in_dir : "/raid/romulus/swong/MegaStore/moderate2tel/"
+    out_dir : "/raid/romulus/swong/mydl3/crab07_final/"
+background_selection: 
+    el_diff : 0.5
+    az_diff : 45 
+    nsb_diff : 1
+    same_szn: True
+binning:
+    EMin : 0.1
+    EMax : 100
+    Ebins : 20
+    OffMin : 0
+    OffMax : 2.5
+    OffBins : 10
+spectrum : 
+    Emin : 0.2
+    Emax : 10
+    nbins : 10
+    type : "PL"
+    params : [3.48e-11,2.33]
+lightcurve:
+    bin_size_min: 1000
+sky_map:
+    map_deg: 2.5
+    exclusion_regions: []
+    theta: 0.08944272
+    on_exclusion_region: 0.35
+    ring_rin: "0.6 deg"
+    ring_width: "0.2 deg"
+    truncate: True
+results_file: 'Crab_0.7_results.yaml'
+plot_names: 'Crab_0.7'

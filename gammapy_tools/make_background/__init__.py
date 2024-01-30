@@ -1,4 +1,4 @@
-from .BackgroundModelEstimator import BackgroundModelEstimator
+from .background_models import BackgroundModelEstimator
 from .make_background import run_make_background
 from .prepare_data import prepare_dataset
 
