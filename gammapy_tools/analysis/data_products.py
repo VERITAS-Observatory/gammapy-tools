@@ -226,7 +226,7 @@ def make_spectrum_RE(config, plot=True):
             data=flux_points, models=model_best_joint
         )
         flux_points_dataset.plot_fit()
-        plt.show()
+        # plt.show()
         plt.savefig(
             config["plot_names"] + "_spectrum.png", bbox_inches="tight", format="png"
         )

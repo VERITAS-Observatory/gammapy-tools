@@ -64,7 +64,10 @@ def rbm_analysis(config):
 
     source_config.observations.required_irf = ["aeff", "edisp"]
 
-    source_config.datasets.geom.wcs.width = {"width": "2.5 deg", "height": "2.5 deg"}
+    source_config.datasets.geom.wcs.width = {
+        "width": f"{map_deg} deg",
+        "height": f"{map_deg} deg",
+    }
     source_config.datasets.geom.wcs.binsize = config["sky_map"]["bin_size"]
     source_config.datasets.map_selection = ["counts", "exposure", "background", "edisp"]
 

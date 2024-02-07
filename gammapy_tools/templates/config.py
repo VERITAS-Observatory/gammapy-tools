@@ -51,6 +51,8 @@ background_selection:
     time_max : 180
     # Whether or not to smooth the background
     smooth : False
+    # Sigma of the gaussian smoothing kernel
+    smooth_sigma : 0.1
 
 
 run_selection:
