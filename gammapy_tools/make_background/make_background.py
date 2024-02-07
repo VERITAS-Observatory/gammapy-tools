@@ -266,8 +266,15 @@ def get_background_for_run(parms) -> (str, list):
             name="offset",
         )
 
+        smooth_sigma = 1
+        if "smooth_sigma" in config["background_selection"]:
+            smooth_sigma = config["background_selection"]["smooth_sigma"]
+
         estimator = BackgroundModelEstimator(
-            energy, offset, smooth=config["background_selection"]["smooth"]
+            energy,
+            offset,
+            smooth=config["background_selection"]["smooth"],
+            smooth_sigma=smooth_sigma,
         )
         estimator.run(observations)
 

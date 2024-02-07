@@ -20,7 +20,9 @@ class BackgroundModelEstimator:
 
     """
 
-    def __init__(self, energy, offset, smooth=False, excluded_sources=[]) -> None:
+    def __init__(
+        self, energy, offset, smooth=False, excluded_sources=[], smooth_sigma=1
+    ) -> None:
         """BackgroundModelEstimator class for estimating the background from runs
 
         Parameters
@@ -44,6 +46,7 @@ class BackgroundModelEstimator:
         self.exposure = self._make_bkg2d(energy, offset, unit="s TeV sr")
         self.excluded_sources = excluded_sources
         self.smooth = smooth
+        self.smooth_sigma = smooth_sigma
 
         # Currelty hard coded...
         # ToDo wrap all this into package info
@@ -298,7 +301,7 @@ class BackgroundModelEstimator:
         rate.quantity /= self.exposure.quantity
 
         if self.smooth:
-            rate = smooth(rate)
+            rate = smooth(rate, sigma=self.smooth_sigma)
 
         return rate
 
