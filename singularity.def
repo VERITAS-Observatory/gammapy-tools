@@ -38,7 +38,9 @@ Stage: build
     bash Miniforge3-$(uname)-$(uname -m).sh  -b -p /opt/conda
     . /opt/conda/bin/activate 
 
-    mamba install -c conda-forge iminuit cmasher astroquery numpy "astropy<6.0.0" pip matplotlib pip jupyterlab ipykernel ipython ipywidgets --yes 
+    mamba install -c conda-forge iminuit cmasher astroquery numpy "astropy<6.0.0" pip matplotlib pip "jupyterlab==4.0.12"  notebook ipykernel ipython ipywidgets --yes 
+    
+
     # mamba install -c conda-forge gammapy=1.0 cmasher astroquery
     
     # Install v2dl3
