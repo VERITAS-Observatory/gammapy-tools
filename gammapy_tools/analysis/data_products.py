@@ -4,6 +4,7 @@ from astropy.coordinates import Angle, SkyCoord
 from regions import CircleSkyRegion
 from astropy.time import Time
 from astropy.table import Table
+from os import environ
 
 # %matplotlib inline
 import matplotlib.pyplot as plt
@@ -49,22 +50,22 @@ def make_spectrum_RE(config, plot=True):
     sig: sqrt(ts) for cumulative significance
     """
 
-    Emin = config["spectrum"]["Emin"]
-    Emax = config["spectrum"]["Emax"]
+    e_min = config["spectrum"]["e_min"]
+    e_max = config["spectrum"]["e_max"]
     spectrum = config["spectrum"]["type"]
     spectral_params = config["spectrum"]["params"]
-    nbins = config["spectrum"]["nbins"]
+    e_bins = config["spectrum"]["e_bins"]
     theta = config["sky_map"]["theta"]
 
     datastore = DataStore.from_dir(config["io"]["out_dir"])
     observations = datastore.get_observations()
 
-    if config["source"]["use_name"]:  # get position from name
-        source_pos = SkyCoord.from_name(config["source"]["source_name"])
+    if config["run_selection"]["use_name"]:  # get position from name
+        source_pos = SkyCoord.from_name(config["run_selection"]["source_name"])
     else:  # get position from ra/dec [deg]
         source_pos = SkyCoord(
-            config["source"]["source_ra"],
-            config["source"]["source_dec"],
+            config["run_selection"]["source_ra"],
+            config["run_selection"]["source_dec"],
             frame="icrs",
             unit="deg",
         )
@@ -74,11 +75,11 @@ def make_spectrum_RE(config, plot=True):
     on_region = CircleSkyRegion(center=source_pos, radius=Angle("{} deg".format(theta)))
 
     energy_axis = MapAxis.from_energy_bounds(
-        Emin, Emax, nbin=nbins, per_decade=True, unit="TeV", name="energy"
+        e_min, e_max, nbin=e_bins, per_decade=True, unit="TeV", name="energy"
     )
 
     energy_axis_true = MapAxis.from_energy_bounds(
-        0.1, 20, nbin=nbins * 2, per_decade=True, unit="TeV", name="energy_true"
+        0.1, 20, nbin=e_bins * 2, per_decade=True, unit="TeV", name="energy_true"
     )
 
     geom = RegionGeom.create(region=on_region, axes=[energy_axis])
@@ -106,7 +107,7 @@ def make_spectrum_RE(config, plot=True):
             )
 
     # exclude nearby HAWC sources
-    # hawc = SourceCatalog3HWC("$GAMMAPY_DATA/catalogs/3HWC.ecsv")
+    # hawc = SourceCatalog3HWC(environ["GAMMAPY_DATA"] + "/catalogs/3HWC.ecsv")
     # hawc_mask = np.sqrt(
     #        (hawc.table["ra"] - source_pos.ra.deg)**2 +
     #        (hawc.table["dec"] - source_pos.dec.deg)**2
@@ -119,7 +120,9 @@ def make_spectrum_RE(config, plot=True):
 
     # exclude bright stars with 0.3 deg region (same as ED)
     star_data = np.loadtxt(
-        "$GAMMAPY_DATA/catalogs/Hipparcos_MAG8_1997.dat", usecols=(0, 1, 2, 3, 4)
+        # environ["GAMMAPY_DATA"] + "/catalogs/Hipparcos_MAG8_1997.dat", usecols=(0, 1, 2, 3, 4)
+        environ["GAMMAPY_DATA"] + "/catalogs/Hipparcos_MAG8_1997.dat",
+        usecols=(0, 1, 2, 3),
     )
     star_cat = Table(
         {
@@ -127,7 +130,7 @@ def make_spectrum_RE(config, plot=True):
             "dec": star_data[:, 1],
             "id": star_data[:, 2],
             "mag": star_data[:, 3],
-            "colour": star_data[:, 4],
+            # "colour": star_data[:, 4],
         }
     )
     star_mask = (
@@ -137,7 +140,8 @@ def make_spectrum_RE(config, plot=True):
         )
         < 2.0
     )
-    star_mask &= (star_cat["mag"] + star_cat["colour"]) < 8
+    # star_mask &= (star_cat["mag"] + star_cat["colour"]) < 8
+    star_mask &= (star_cat["mag"]) < 8
 
     for src in star_cat[star_mask]:
         exclusion_regions.append(
@@ -210,7 +214,7 @@ def make_spectrum_RE(config, plot=True):
     fit_joint = Fit()
     result_joint = fit_joint.run(datasets=datasets)
     model_best_joint = model.copy()
-    energy_edges = np.geomspace(Emin, Emax, nbins) * u.TeV
+    energy_edges = np.geomspace(e_min, e_max, e_bins) * u.TeV
 
     fpe = FluxPointsEstimator(
         energy_edges=energy_edges, source="my_source", selection_optional="all"
@@ -250,18 +254,18 @@ def get_flux_lc(config, type="flux"):
     observations = datastore.get_observations()
 
     amp, idx = config["spectrum"]["params"]
-    if config["source"]["use_name"]:  # get position from name
-        source_pos = SkyCoord.from_name(config["source"]["source_name"])
+    if config["run_selection"]["use_name"]:  # get position from name
+        source_pos = SkyCoord.from_name(config["run_selection"]["source_name"])
     else:  # get position from ra/dec [deg]
         source_pos = SkyCoord(
-            config["source"]["source_ra"],
-            config["source"]["source_dec"],
+            config["run_selection"]["source_ra"],
+            config["run_selection"]["source_dec"],
             frame="icrs",
             unit="deg",
         )
-    Emin = config["spectrum"]["Emin"]
-    # Emax = config["spectrum"]["Emax"]
-    nbin = config["spectrum"]["nbins"]
+    e_min = config["spectrum"]["e_min"]
+    # e_max = config["spectrum"]["e_max"]
+    nbin = config["spectrum"]["e_bins"]
 
     # selection = dict(
     #     type="sky_circle",
@@ -273,8 +277,8 @@ def get_flux_lc(config, type="flux"):
 
     # energy binning
     energy_axis = MapAxis.from_energy_bounds(
-        str(Emin) + " TeV", "20 TeV", nbin
-    )  # make sure all flux > Emin makes it in
+        str(e_min) + " TeV", "20 TeV", nbin
+    )  # make sure all flux > e_min makes it in
     energy_axis_true = MapAxis.from_energy_bounds(
         "0.1 TeV", "30 TeV", nbin=nbin * 2, name="energy_true"
     )
@@ -298,7 +302,7 @@ def get_flux_lc(config, type="flux"):
             )
 
     # exclude nearby HAWC sources
-    # hawc = SourceCatalog3HWC("$GAMMAPY_DATA/catalogs/3HWC.ecsv")
+    # hawc = SourceCatalog3HWC(environ["GAMMAPY_DATA"] + "/catalogs/3HWC.ecsv")
     # hawc_mask = np.sqrt(
     #        (hawc.table["ra"] - source_pos.ra.deg)**2 +
     #        (hawc.table["dec"] - source_pos.dec.deg)**2
@@ -311,7 +315,8 @@ def get_flux_lc(config, type="flux"):
 
     # exclude bright stars with 0.3 deg region (same as ED)
     star_data = np.loadtxt(
-        "$GAMMAPY_DATA/catalogs/Hipparcos_MAG8_1997.dat", usecols=(0, 1, 2, 3)
+        environ["GAMMAPY_DATA"] + "/catalogs/Hipparcos_MAG8_1997.dat",
+        usecols=(0, 1, 2, 3),
     )
     star_cat = Table(
         {
@@ -363,7 +368,7 @@ def get_flux_lc(config, type="flux"):
     if type == "flux":
         time_intervals = [Time([start, stop])]
         lc_maker_1d = LightCurveEstimator(
-            energy_edges=[Emin, 20] * u.TeV,
+            energy_edges=[e_min, 20] * u.TeV,
             time_intervals=time_intervals,
             n_sigma_ul=2,
             reoptimize=False,
@@ -379,7 +384,7 @@ def get_flux_lc(config, type="flux"):
             Time([tstart, tstop]) for tstart, tstop in zip(times[:-1], times[1:])
         ]
         lc_maker_1d = LightCurveEstimator(
-            energy_edges=[Emin, 20] * u.TeV,
+            energy_edges=[e_min, 20] * u.TeV,
             selection_optional=None,
             time_intervals=time_intervals,
             n_sigma_ul=2,
@@ -388,7 +393,7 @@ def get_flux_lc(config, type="flux"):
 
     if type == "runwise":
         lc_maker_1d = LightCurveEstimator(
-            energy_edges=[Emin, 20] * u.TeV,
+            energy_edges=[e_min, 20] * u.TeV,
             selection_optional=None,
             n_sigma_ul=2,
         )

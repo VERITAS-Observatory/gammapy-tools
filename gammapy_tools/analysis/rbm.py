@@ -44,8 +44,8 @@ def rbm_analysis(config):
 
     # get position from ra/dec [deg]
     source_pos = SkyCoord(
-        config["source"]["source_ra"],
-        config["source"]["source_dec"],
+        config["run_selection"]["source_ra"],
+        config["run_selection"]["source_dec"],
         frame="icrs",
         unit="deg",
     )
@@ -65,7 +65,7 @@ def rbm_analysis(config):
     source_config.observations.required_irf = ["aeff", "edisp"]
 
     source_config.datasets.geom.wcs.width = {"width": "2.5 deg", "height": "2.5 deg"}
-    source_config.datasets.geom.wcs.binsize = config["sky_map"]["bin_sz"]
+    source_config.datasets.geom.wcs.binsize = config["sky_map"]["bin_size"]
     source_config.datasets.map_selection = ["counts", "exposure", "background", "edisp"]
 
     # Cutout size (for the run-wise event selection)
@@ -181,7 +181,8 @@ def rbm_analysis(config):
     sigma = output_dict["sqrt_ts"]
     exposure = output_dict["ontime"]
 
-    significance_map_off = significance_map * exclusion_mask
+    # significance_map_off = significance_map * exclusion_mask
+    # significance_map_off = significance_map[exclusion_mask]
 
     return (
         counts,
@@ -192,7 +193,7 @@ def rbm_analysis(config):
         excess_map,
         exposure,
         significance_map,
-        significance_map_off,
+        exclusion_mask,
     )
 
 
@@ -201,7 +202,7 @@ def rbm_plots(
     spectral_points,
     excess_map,
     significance_map,
-    significance_map_off,
+    exclusion_mask,
     c_sig,
     c_time,
     save=True,
@@ -215,7 +216,7 @@ def rbm_plots(
         spectral_points: spectral points
         excess map: excess counts map
         significance map: Li&Ma significance map
-        significance map off: off counts sig map
+        exclusion mask: Exclusion mask of regions to be excluded
         c_sig: cumulative significance
         c_time: cumulative time
         save: if true, saves plots with prefix defined in config['plot_names']
@@ -241,7 +242,9 @@ def rbm_plots(
 
     # significance distribution
     significance_all = significance_map.data[np.isfinite(significance_map.data)]
-    significance_off = significance_map_off.data[np.isfinite(significance_map_off.data)]
+    significance_off = significance_map.data[
+        np.isfinite(significance_map.data) & exclusion_mask
+    ]
 
     fig, ax = plt.subplots()
     ax.hist(
@@ -321,7 +324,7 @@ def write_validation_info(
     norm_err = spectab["error"][1]
 
     output_dict = {
-        "source": config["source"]["source_name"],
+        "source": config["run_selection"]["source_name"],
         "gammapy version": gammapy.__version__,
         "exposure": float(exposure.value) / 60,
         "on": int(counts),
