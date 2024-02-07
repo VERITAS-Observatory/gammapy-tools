@@ -3,7 +3,8 @@ name: Bump version
 on:
   push:
     branches:
-      - main
+    # disabling it for now
+      - _main
 
 jobs:
   bump_version:
