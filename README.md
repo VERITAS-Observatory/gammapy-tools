@@ -15,17 +15,17 @@ Also install gammapy-data using
 ```
 gammapy download datasets
 ```
-And set the enviromental variable GAMMAPY_DATA, to that download location (for example):
+And set the environmental variable GAMMAPY_DATA, to that download location (for example):
 ```
 export GAMMAPY_DATA=/path/to/gammapy/data
 ```
 
 A modified version of `Hipparcos_MAG8_1997.dat` is used for finding stars. Copy this into the  `$GAMMAPY_DATA/catalogs/` directory:
 ```
-cp background_from_bkg/Hipparcos_MAG8_1997.dat $GAMMAPY_DATA/catalogs/
+cp gammapy_tools/Hipparcos_MAG8_1997.dat $GAMMAPY_DATA/catalogs/
 ```
 
-As there maybe issues installing root-numpy, V2DL3 can be installed in one's enviroment as follows (replace `mamba` with `conda` for a conda install):
+As there maybe issues installing root-numpy, V2DL3 can be installed in one's environment as follows (replace `mamba` with `conda` for a conda install):
 ```
 git clone https://github.com/VERITAS-Observatory/V2DL3.git
 cd V2DL3
@@ -40,9 +40,8 @@ mv setup.py _setup.py && grep -v "root_numpy" _setup.py > setup.py && pip instal
 cd ../ ; rm -r V2DL3
 ```
 
-`background_from_bkg` can then be installed via:
+`gammapy_tools` can then be installed via:
 ```
-pip install -r requirements.txt
 pip install .
 ```
 
@@ -54,7 +53,12 @@ For details on working with containers see [containers.md](docs/containers.md)
 
 A number of worked examples can be found in [examples](examples).
 
-To simplify analysis, a "driver" config file is used. An example of such a config file is shown in [config_crab.yaml](config_crab.yaml), which contains 4 crab runs.
+To simplify analysis, a "driver" config file is used. An example of such a config file is shown in [gammapy_tools/templates/config.py](gammapy_tools/templates/config.py), which contains 4 crab runs. 
+A config can be generated using:
+```
+from gammapy_tools.templates import get_config
+config = get_config()
+```
 
 * See [config.md](docs/config.md) for details on config files.
 * See [mimicing_data.md](docs/mimicing_data.md) for details on mimicing and scrambling data.
