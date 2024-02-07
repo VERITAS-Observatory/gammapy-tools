@@ -20,7 +20,7 @@ description = "VERITAS (VEGAS and Eventdisplay) to DL3 Converter"
 readme = "README.md"
 license = { file="LICENSE" }
 
-requires-python = "~=3.10"
+requires-python = ">=3.9"
 dependencies = [
     "pyyaml",
     "numpy",
