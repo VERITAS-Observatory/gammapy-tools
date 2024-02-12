@@ -8,7 +8,9 @@ packages=[
     "gammapy_tools.make_background", 
     "gammapy_tools.fake_source_coordinates", 
     "gammapy_tools.templates",
-    "gammapy_tools.analysis"]
+    "gammapy_tools.analysis",
+    "gammapy_tools.utils",
+    ]
 
 [tool.setuptools_scm]
 write_to = "gammapy_tools/_version.py"
@@ -25,6 +27,7 @@ dependencies = [
     "pyyaml",
     "numpy",
     "astropy<6.0.0",
+    "astroquery",
     "pymysql",
     "pandas",
     "tqdm",

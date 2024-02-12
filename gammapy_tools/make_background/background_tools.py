@@ -1,11 +1,19 @@
+"""
+Background tools
+
+A set of tools to find and compare backgrounds to determine the most suitable runs
+for background generation
+"""
+
 import numpy as np
 from astropy.io import fits
 from astropy.table import vstack, Table
 from gammapy.data import DataStore
 from gammapy.irf import Background2D
 from multiprocess import Pool, cpu_count
+from ..utils import get_cdf
 
-from .make_background import findData_mimic
+from .make_background import find_data_mimic
 
 
 def kl_divergence(data1: np.array, data2: np.array) -> float:
@@ -130,7 +138,7 @@ def process_run(
         obs = data_store.obs_ids
     elif bmimic:
         with fits.open(finterest) as hdul:
-            data_mask, _ = findData_mimic(hdul, config, obs_info)
+            data_mask, _ = find_data_mimic(hdul, config, obs_info)
         obs = obs_info[data_mask]["OBS_ID"]
     else:
         obs = search_runs
@@ -156,3 +164,28 @@ def process_run(
     obs_info["kl_div"] = res
     obs_info.write(output_name, overwrite=overwrite)
     return res
+
+
+def get_requested_exposure(obs_table: Table, tobs: float) -> list:
+    """Get a list of observations which match the required observations time
+
+    Parameters
+    ----------
+        obs_table (astropy.table)   - Table of observations.
+        tobs (float)                - Requested background exposure (hours)
+
+
+    Returns
+    ----------
+        res (list)                  - List of runs to use
+
+    """
+
+    # Sort by kl_div (reverse, kl should be small)
+    sorted_table = obs_table.sort(["kl_div"], reverse=True)
+    # Get the cumulative livetime
+    cumul_obs = get_cdf(sorted_table["LIVETIME"].as_array(), normalize=False)
+    # Convert to hours and 1% buffer
+    mask = cumul_obs / 60 / 60 <= 1.01 * tobs
+
+    return sorted_table[mask]
