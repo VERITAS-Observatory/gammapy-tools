@@ -1,3 +1,4 @@
 from .stats import get_cdf
+from .run_details import get_epoch, get_obs_details, find_data_mimic
 
-__all__ = ["get_cdf"]
+__all__ = ["get_cdf", "get_epoch", "get_obs_details", "find_data_mimic"]
