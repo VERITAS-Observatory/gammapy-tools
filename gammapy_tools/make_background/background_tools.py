@@ -1,6 +1,6 @@
 import numpy as np
 from astropy.io import fits
-from astropy.table import vstack
+from astropy.table import vstack, Table
 from gammapy.data import DataStore
 from gammapy.irf import Background2D
 from multiprocess import Pool, cpu_count
@@ -8,13 +8,39 @@ from multiprocess import Pool, cpu_count
 from .make_background import findData_mimic
 
 
-def kl_divergence(data1, data2):
+def kl_divergence(data1: np.array, data2: np.array) -> float:
+    """Calculate the Kullback-Leibler Divergence.
+    This provides a metric for comparing two 2D distributions
+
+    Parameters
+    ----------
+        data1 (numpy.array)         - Array to compare against.
+        data2 (numpy.array)         - Array to compare.
+
+
+    Returns
+    ----------
+        kl  (float)                 - KL Divergence score.
+
+    """
     kl = data1 * np.log(data1 / data2)
     kl = kl.sum()
     return kl
 
 
-def get_background(filename):
+def get_background(filename: str) -> np.array:
+    """Get the background from a fits file
+
+    Parameters
+    ----------
+        filename (str)              - Name of the file to be read in.
+
+
+    Returns
+    ----------
+        data (numpy.array)          - Background.
+
+    """
     with fits.open(filename) as hdul:
         back = Background2D.from_hdulist(hdul)
         data = back.data
@@ -24,7 +50,22 @@ def get_background(filename):
     return data
 
 
-def analyze_data(data, obs, sub_tab, search_dir):
+def analyze_data(data: np.array, obs: int, sub_tab: Table, search_dir: str) -> float:
+    """Get the KL Divergence for an observation
+
+    Parameters
+    ----------
+        data (numpy.array)          - Reference distribution.
+        obs (int)                   - Observation ID of interest.
+        sub_tab (astropy.table)     - Table of observations for searching.
+        search_dir (str)            - Directory to search for the observation.
+
+
+    Returns
+    ----------
+        kl_div (float)              - KL Divergence.
+
+    """
     of_interest = sub_tab["OBS_ID"] == obs
     fname = (
         search_dir
@@ -39,8 +80,35 @@ def analyze_data(data, obs, sub_tab, search_dir):
 
 
 def process_run(
-    obs_id, config, output_name, search_runs=None, bmimic=False, overwrite=False
-):
+    obs_id: int,
+    config: dict,
+    output_name: str,
+    search_runs: list = None,
+    bmimic: bool = False,
+    overwrite: bool = False,
+    ncpu: int = None,
+) -> list:
+    """Calculate the KL Divergence for a set of observations
+
+    Parameters
+    ----------
+        obs_id (int)                - Observation of interest.
+        config (dict)               - Configuration dictionary.
+        output_name (str)           - Name of the file to save the results to.
+        search_runs (list)          - List of runs to calculate the KL divergence for.
+                                      Defaults to None
+        bmimic (bool)               - If the mimic critera is used to find the `search_runs`.
+                                      Defaults to False.
+        overwrite (bool)            - Overwrite the file specified by `output_name`.
+                                      Defaults to False.
+        ncpu (int)                  - Number of parallel jobs to run. Defaults to `ncpu-1`.
+
+
+    Returns
+    ----------
+        res (list)                  - List of KL divergence
+
+    """
     search_dir = config["io"]["search_datastore"]
 
     data_store = DataStore.from_dir(search_dir)
@@ -74,7 +142,10 @@ def process_run(
     sub_tab = vstack(stack)
     obs_info = vstack(info_tab)
 
-    with Pool(cpu_count() - 1) as pool:
+    if ncpu is None:
+        ncpu = cpu_count() - 1
+
+    with Pool(ncpu) as pool:
         data_interest = get_background(finterest)
 
         def call_obs(x):
@@ -82,7 +153,6 @@ def process_run(
 
         res = pool.map(call_obs, obs)
 
-    # print (len(res))
     obs_info["kl_div"] = res
     obs_info.write(output_name, overwrite=overwrite)
     return res
