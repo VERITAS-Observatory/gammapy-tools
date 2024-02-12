@@ -26,7 +26,8 @@ Stage: build
     export GAMMAPY_DATA=/gamma-tools/gammapy-datasets/1.1/
     . "/opt/conda/etc/profile.d/conda.sh"
     . /opt/conda/bin/activate 
-    
+    export PATH=/opt/conda/bin/:$PATH
+
 %post
 
     apt update
@@ -86,5 +87,5 @@ Stage: build
     Version v0.0.1
 
 %help
-    This is a container with juptyer lab pre-installed with gammapy, v2dl3 and gammapy-background-analysis
+    This is a container with juptyer lab pre-installed with gammapy, v2dl3 and gammapy-tools
 
