@@ -55,6 +55,8 @@ background_selection:
     smooth : False
     # Sigma of the gaussian smoothing kernel
     smooth_sigma : 0.1
+    # If we should use the KL divergence to find the background runs
+    KL_DIV : True
 
 
 run_selection:
