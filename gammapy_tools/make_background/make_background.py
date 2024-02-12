@@ -53,6 +53,7 @@ def get_background_for_run(parms) -> (str, list):
         os.makedirs(out_dir)
 
     mega_store = DataStore.from_dir(config["io"]["search_datastore"])
+    mega_table = mega_store.obs_table
     local_store = DataStore.from_dir(in_dir)
 
     tab_local = local_store.hdu_table
@@ -72,28 +73,34 @@ def get_background_for_run(parms) -> (str, list):
             config["background_selection"]["bkg_runlist"] = {}
 
         if obs not in config["background_selection"]["bkg_runlist"]:
-            # data_mask, livetime = find_data_mimic(hdul, config, mega_table)
-            kl_table = process_run(
-                obs,
-                config,
-                output_name=None,
-                search_runs=None,
-                bmimic=True,
-                overwrite=False,
-                njobs=config["config"]["njobs"],
-            )
-            # Default to 10 hours
-            t_req = 10
-            if "time_request" in config["background_selection"]:
-                t_req = float(config["background_selection"]["time_request"])
 
-            kl_table = get_requested_exposure(kl_table, t_req)
-            livetime = np.sum(kl_table["LIVETIME"] / 60 / 60)
+            if config["background_selection"]["KL_DIV"]:
+                kl_table = process_run(
+                    obs,
+                    config,
+                    output_name=None,
+                    search_runs=None,
+                    bmimic=True,
+                    overwrite=False,
+                    njobs=config["config"]["njobs"],
+                )
+                # Default to 10 hours
+                t_req = 10
+                if "time_request" in config["background_selection"]:
+                    t_req = float(config["background_selection"]["time_request"])
 
-            if livetime < t_req:
-                print(f"{obs} used {livetime} hours for background generation")
+                kl_table = get_requested_exposure(kl_table, t_req)
+                livetime = np.sum(kl_table["LIVETIME"] / 60 / 60)
 
-            obs_list = kl_table["OBS_ID"]
+                if livetime < t_req:
+                    print(f"{obs} used {livetime} hours for background generation")
+
+                obs_list = kl_table["OBS_ID"]
+
+            else:
+                data_mask, livetime = find_data_mimic(hdul, config, mega_table)
+                obs_list = mega_table[data_mask]["OBS_ID"]
+
             config["background_selection"]["bkg_runlist"][obs] = obs_list
 
         else:
@@ -133,6 +140,10 @@ def get_background_for_run(parms) -> (str, list):
             smooth_sigma=smooth_sigma,
         )
         estimator.run(observations)
+        # Check if a background currently exists
+        if "BACKGROUND" in hdul:
+            bkg_indx = hdul.index_of("BACKGROUND")
+            hdul.pop(bkg_indx)
 
         hdul.append(estimator.background_rate.to_table_hdu())
 
