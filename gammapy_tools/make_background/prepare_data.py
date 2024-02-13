@@ -55,7 +55,9 @@ def prepare_dataset(config):
         data_store.copy_obs(obs_in_db, in_dir)
     except Exception as e:
         if len(obs_in_db):
-            raise RuntimeError(f"Observations cannot be found in {db_dir}") from e
+            raise RuntimeError(
+                f"Observations cannot be found in {db_dir}, do these files exist?"
+            ) from e
         else:
             raise RuntimeError("Error copying files") from e
 
