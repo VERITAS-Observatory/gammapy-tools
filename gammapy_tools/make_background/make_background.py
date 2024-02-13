@@ -23,7 +23,7 @@ from ..utils.run_details import find_data_mimic
 
 # ToDo: are table operations cpu bound? mega_store = path / mega_store = table
 # Are tables "pickleable?"
-def get_background_for_run(parms) -> tuple[str, list]:
+def get_background_for_run(parms: tuple[float, dict]) -> tuple[str, list]:
     """Generate the background for a given run
 
     Parameters
@@ -146,7 +146,7 @@ def get_background_for_run(parms) -> tuple[str, list]:
     return out_file, obs_list
 
 
-def generate_background_from_run(parms) -> str:
+def generate_background_from_run(parms: tuple[int, dict]) -> str:
     """Generate the background from a given run
 
     Parameters
@@ -358,7 +358,7 @@ def generate_background_from_run(parms) -> str:
 #     return observations
 
 
-def run_make_background(config) -> dict:
+def run_make_background(config: dict) -> dict:
     """Generate background
 
     Parameters
