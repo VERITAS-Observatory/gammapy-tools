@@ -49,10 +49,14 @@ background_selection:
     n_tels : 4
     # Maximum time between runs in days
     time_max : 180
+    # Requested number of hours for producing a background
+    time_request : 10
     # Whether or not to smooth the background
     smooth : False
     # Sigma of the gaussian smoothing kernel
     smooth_sigma : 0.1
+    # If we should use the KL divergence to find the background runs
+    KL_DIV : True
 
 
 run_selection:

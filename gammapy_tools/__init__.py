@@ -3,7 +3,6 @@ from . import make_background
 from . import templates
 from . import fake_source_coordinates
 
-
 __all__ = (
     analysis.__all__
     + make_background.__all__
