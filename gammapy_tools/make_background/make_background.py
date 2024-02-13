@@ -1,17 +1,13 @@
 import os
 import sys
 from multiprocessing import Pool
-from os import listdir
-from os.path import isfile, join
 
 import numpy as np
 import yaml
 
 # Astropy
 from astropy.io import fits
-from astropy.table import Table, vstack
 from gammapy.data import DataStore
-from gammapy.irf import Background2D
 
 # Gammapy stuff
 from gammapy.maps import MapAxis
@@ -27,20 +23,19 @@ from ..utils.run_details import find_data_mimic
 
 # ToDo: are table operations cpu bound? mega_store = path / mega_store = table
 # Are tables "pickleable?"
-def get_background_for_run(parms) -> (str, list):
+def get_background_for_run(parms) -> tuple[str, list]:
     """Generate the background for a given run
 
     Parameters
     ----------
-        parms   - tupple of obs_id and config
-            obs_id - Run number
-            config  - Dictionary containing cofigurations details
+        parms (tuple[float,dict])               - tupple of Run number and config
+
 
 
     Returns
     ----------
-        out_file    - Filename of the output file
-        obs_list    - List of obseravtions used to generate the background
+        out_file (str)                          - Name of the output file
+        obs_list (list)                         - Obseravtions used to generate the background
 
     """
 
@@ -62,12 +57,8 @@ def get_background_for_run(parms) -> (str, list):
     file_path = str(tab_local[mask]["FILE_DIR"][0])
 
     in_file = os.path.join(in_dir, file_path, file_name)
-    # print (in_file, file_path, file_name)
+
     with fits.open(in_file) as hdul:
-        # try/catch should only trigger if run is outside of epoch definitions
-        # or we have a major issue with the DL3 file
-        # ToDo: Better error exiting
-        # try :
 
         if "bkg_runlist" not in config["background_selection"]:
             config["background_selection"]["bkg_runlist"] = {}
@@ -84,6 +75,7 @@ def get_background_for_run(parms) -> (str, list):
                     overwrite=False,
                     njobs=config["config"]["njobs"],
                 )
+
                 # Default to 10 hours
                 t_req = 10
                 if "time_request" in config["background_selection"]:
@@ -159,15 +151,12 @@ def generate_background_from_run(parms) -> str:
 
     Parameters
     ----------
-    parms   - tupple of obs_id and config
-        obs_id - Run number
-        config  - Dictionary containing cofigurations details
+        parms (tuple[int, dict])                    - tupple of run number and config dictionary
 
 
     Returns
     ----------
-        data_mask   - Mask to be applied to the obs_table with selected data
-        livetime    - Livetime of the selected data
+        filename (str)                              - Name of the background attached file
 
     """
     obs, config = parms
@@ -220,147 +209,153 @@ def generate_background_from_run(parms) -> str:
             energy, offset, smooth=config["background_selection"]["smooth"]
         )
         estimator.run(observations)
+        if "BACKGROUND" in hdul:
+            bkg_indx = hdul.index_of("BACKGROUND")
+            hdul.pop(bkg_indx)
 
         hdul.append(estimator.background_rate.to_table_hdu())
         out_file = os.path.join(out_dir, file_name)
 
         hdul.writeto(out_file, overwrite=True)
+
     return out_file
 
 
-def write_index_files(config):
-    dl3_dir = config["io"]["out_dir"]
-    dl3Files = [
-        dl3_dir + f
-        for f in listdir(dl3_dir)
-        if isfile(join(dl3_dir, f))
-        and f.endswith(".fits")
-        and (f.strip(".anasum.fits"))
-    ]
-    create_obs_hdu_index_file(dl3Files, index_file_dir=dl3_dir)
-    return
+# SOB Repeated code?
+
+# def write_index_files(config):
+#     dl3_dir = config["io"]["out_dir"]
+#     dl3Files = [
+#         dl3_dir + f
+#         for f in listdir(dl3_dir)
+#         if isfile(join(dl3_dir, f))
+#         and f.endswith(".fits")
+#         and (f.strip(".anasum.fits"))
+#     ]
+#     create_obs_hdu_index_file(dl3Files, index_file_dir=dl3_dir)
+#     return
 
 
-def attach_bkg(parms):
-    # this function is only used to append background files you already have
-    # (i.e., not from the mega store) - not sure how useful this is??
-    obs_id, config = parms
-    bkg_dir = config["io"]["out_dir"]
-    dl3_dir = config["io"]["in_dir"]
+# def attach_bkg(parms):
+#     # this function is only used to append background files you already have
+#     # (i.e., not from the mega store) - not sure how useful this is??
+#     obs_id, config = parms
+#     bkg_dir = config["io"]["out_dir"]
+#     dl3_dir = config["io"]["in_dir"]
 
-    dl3Files = [
-        dl3_dir + f
-        for f in listdir(dl3_dir)
-        if isfile(join(dl3_dir, f))
-        and f.endswith(".fits")
-        and (f.strip(".anasum.fits"))
-    ]
-    create_obs_hdu_index_file(dl3Files, index_file_dir=dl3_dir)
-    data_store = DataStore.from_dir(dl3_dir)
-    hdu_table = data_store.hdu_table.read(f"{dl3_dir}" + "/" + "hdu-index.fits.gz")
-    obs_table = data_store.obs_table.read(f"{dl3_dir}" + "/" + "obs-index.fits.gz")
-    data_store.hdu_table.remove_rows(data_store.hdu_table["HDU_TYPE"] == "bkg")
-    hdu_table.remove_rows(hdu_table["HDU_NAME"] == "BKG")
-    bkg_model_names = "background_" + str(obs_id) + "_smoothed.fits"
+#     dl3Files = [
+#         dl3_dir + f
+#         for f in listdir(dl3_dir)
+#         if isfile(join(dl3_dir, f))
+#         and f.endswith(".fits")
+#         and (f.strip(".anasum.fits"))
+#     ]
+#     create_obs_hdu_index_file(dl3Files, index_file_dir=dl3_dir)
+#     data_store = DataStore.from_dir(dl3_dir)
+#     hdu_table = data_store.hdu_table.read(f"{dl3_dir}" + "/" + "hdu-index.fits.gz")
+#     obs_table = data_store.obs_table.read(f"{dl3_dir}" + "/" + "obs-index.fits.gz")
+#     data_store.hdu_table.remove_rows(data_store.hdu_table["HDU_TYPE"] == "bkg")
+#     hdu_table.remove_rows(hdu_table["HDU_NAME"] == "BKG")
+#     bkg_model_names = "background_" + str(obs_id) + "_smoothed.fits"
 
-    if "bkg" not in list(hdu_table["HDU_TYPE"]):
-        hdu_table.remove_column("FILE_DIR")
-        hdu_table.add_column(f"{dl3_dir}", name="FILE_DIR")
-        # zenith_angle = list(obs_table["ZEN_PNT"])
-        # azimuth_angle = list(obs_table["AZ_PNT"])
-        # obs_ids = list(obs_table["OBS_ID"])
-        rows = []
-        filename = bkg_model_names
-        row = []
-        row = {
-            "OBS_ID": obs_id,
-            "HDU_TYPE": "bkg",
-            "HDU_CLASS": "bkg_2d",
-            "FILE_DIR": f"{bkg_dir}",
-            "FILE_NAME": filename,
-            "HDU_NAME": "BKG",
-        }
-        rows.append(row)
-        hdu_table_bkg = Table(rows=rows)
-        hdu_table = vstack([hdu_table, hdu_table_bkg])
-        hdu_table.sort("OBS_ID")
-        hdu_bin_table = fits.table_to_hdu(hdu_table)
-        hdul = fits.open(f"{dl3_dir}" + "/" + "hdu-index.fits.gz")
-        hdul[1] = hdu_bin_table
-        hdul.writeto(f"{dl3_dir}" + "/" + "hdu-index.fits.gz", overwrite=True)
-    filename = list(hdu_table["FILE_NAME"])
-    file_dir = list(hdu_table["FILE_DIR"])
-    bkg_indl = []
-    for i in range(len(file_dir)):
-        if "background" in filename[i]:
-            bkg_indl.append(i)
+#     if "bkg" not in list(hdu_table["HDU_TYPE"]):
+#         hdu_table.remove_column("FILE_DIR")
+#         hdu_table.add_column(f"{dl3_dir}", name="FILE_DIR")
+#         # zenith_angle = list(obs_table["ZEN_PNT"])
+#         # azimuth_angle = list(obs_table["AZ_PNT"])
+#         # obs_ids = list(obs_table["OBS_ID"])
+#         rows = []
+#         filename = bkg_model_names
+#         row = []
+#         row = {
+#             "OBS_ID": obs_id,
+#             "HDU_TYPE": "bkg",
+#             "HDU_CLASS": "bkg_2d",
+#             "FILE_DIR": f"{bkg_dir}",
+#             "FILE_NAME": filename,
+#             "HDU_NAME": "BKG",
+#         }
+#         rows.append(row)
+#         hdu_table_bkg = Table(rows=rows)
+#         hdu_table = vstack([hdu_table, hdu_table_bkg])
+#         hdu_table.sort("OBS_ID")
+#         hdu_bin_table = fits.table_to_hdu(hdu_table)
+#         hdul = fits.open(f"{dl3_dir}" + "/" + "hdu-index.fits.gz")
+#         hdul[1] = hdu_bin_table
+#         hdul.writeto(f"{dl3_dir}" + "/" + "hdu-index.fits.gz", overwrite=True)
+#     filename = list(hdu_table["FILE_NAME"])
+#     file_dir = list(hdu_table["FILE_DIR"])
+#     bkg_indl = []
+#     for i in range(len(file_dir)):
+#         if "background" in filename[i]:
+#             bkg_indl.append(i)
 
-    delete_prior_bkg = True
-    count = 0
+#     delete_prior_bkg = True
+#     count = 0
 
-    hdu_list = fits.open(f"{dl3_dir}" + "/" + str(obs_id) + ".anasum.fits")
+#     hdu_list = fits.open(f"{dl3_dir}" + "/" + str(obs_id) + ".anasum.fits")
 
-    hdul_new = fits.HDUList()
-    for index, hdu in enumerate(hdu_list):
-        # remove BKG and replace by new one
-        if index > 0:  # first index not containing EXTNAME
-            if delete_prior_bkg and hdu.header["EXTNAME"] == "BKG":
-                print(index, "removed")
-                continue
-        # hdu_copy = hdu.copy()
-        hdul_new.append(hdu)
-    bkg_index = bkg_indl[count]
-    print(hdu_table["FILE_DIR"][bkg_index] + hdu_table["FILE_NAME"][bkg_index])
-    BKG2D = Background2D.read(
-        hdu_table["FILE_DIR"][bkg_index] + hdu_table["FILE_NAME"][bkg_index]
-    )
-    hdu = BKG2D.to_table_hdu()
-    hdu.name = "BKG"
-    hdul_new.append(hdu)
-    count += 1
-    print([_.name for _ in hdul_new])
-    hdul_new.writeto(f"{bkg_dir}" + "/" + str(obs_id) + ".bkg.fits", overwrite=True)
-    data, header = fits.getdata(
-        f"{bkg_dir}" + "/" + str(obs_id) + ".bkg.fits", 6, header=True
-    )
-    header["HDUCLAS1"] = "RESPONSE"
-    header["HDUCLAS2"] = "BKG"
-    header["HDUCLAS3"] = "FULL-ENCLOSURE"
-    header["HDUCLAS4"] = "BKG_2D"
-    fits.update(f"{bkg_dir}" + "/" + str(obs_id) + ".bkg.fits", data, header, 6)
-    final = []
+#     hdul_new = fits.HDUList()
+#     for index, hdu in enumerate(hdu_list):
+#         # remove BKG and replace by new one
+#         if index > 0:  # first index not containing EXTNAME
+#             if delete_prior_bkg and hdu.header["EXTNAME"] == "BKG":
+#                 print(index, "removed")
+#                 continue
+#         # hdu_copy = hdu.copy()
+#         hdul_new.append(hdu)
+#     bkg_index = bkg_indl[count]
+#     print(hdu_table["FILE_DIR"][bkg_index] + hdu_table["FILE_NAME"][bkg_index])
+#     BKG2D = Background2D.read(
+#         hdu_table["FILE_DIR"][bkg_index] + hdu_table["FILE_NAME"][bkg_index]
+#     )
+#     hdu = BKG2D.to_table_hdu()
+#     hdu.name = "BKG"
+#     hdul_new.append(hdu)
+#     count += 1
+#     print([_.name for _ in hdul_new])
+#     hdul_new.writeto(f"{bkg_dir}" + "/" + str(obs_id) + ".bkg.fits", overwrite=True)
+#     data, header = fits.getdata(
+#         f"{bkg_dir}" + "/" + str(obs_id) + ".bkg.fits", 6, header=True
+#     )
+#     header["HDUCLAS1"] = "RESPONSE"
+#     header["HDUCLAS2"] = "BKG"
+#     header["HDUCLAS3"] = "FULL-ENCLOSURE"
+#     header["HDUCLAS4"] = "BKG_2D"
+#     fits.update(f"{bkg_dir}" + "/" + str(obs_id) + ".bkg.fits", data, header, 6)
+#     final = []
 
-    for i in list(obs_table["OBS_ID"]):
-        a = f"{bkg_dir}" "/" + str(i) + ".bkg.fits"
-        final.append(a)
+#     for i in list(obs_table["OBS_ID"]):
+#         a = f"{bkg_dir}" "/" + str(i) + ".bkg.fits"
+#         final.append(a)
 
-    create_obs_hdu_index_file(final, index_file_dir=bkg_dir)
-    return ()
+#     create_obs_hdu_index_file(final, index_file_dir=bkg_dir)
+#     return ()
 
 
-def get_mimic_for_run(parms):
-    obs, config = parms
+# def get_mimic_for_run(parms):
+#     obs, config = parms
 
-    dl3_file_fmt = "{runid}.anasum.fits"
+#     dl3_file_fmt = "{runid}.anasum.fits"
 
-    in_dir = config["io"]["in_dir"]
-    # out_dir = config["io"]["out_dir"]
+#     in_dir = config["io"]["in_dir"]
+#     # out_dir = config["io"]["out_dir"]
 
-    mega_store = DataStore.from_dir(config["io"]["search_datastore"])
-    mega_table = mega_store.obs_table
+#     mega_store = DataStore.from_dir(config["io"]["search_datastore"])
+#     mega_table = mega_store.obs_table
 
-    in_file = os.path.join(in_dir, dl3_file_fmt.format(runid=obs))
-    with fits.open(in_file) as hdul:
-        data_mask, livetime = find_data_mimic(hdul, config)
+#     in_file = os.path.join(in_dir, dl3_file_fmt.format(runid=obs))
+#     with fits.open(in_file) as hdul:
+#         data_mask, livetime = find_data_mimic(hdul, config)
 
-        if livetime < 10:
-            print(obs, livetime)
+#         if livetime < 10:
+#             print(obs, livetime)
 
-        # Get observations form the mega store
-        observations = mega_store.get_observations(
-            mega_table[data_mask]["OBS_ID"], required_irf="all-optional"
-        )
-    return observations
+#         # Get observations form the mega store
+#         observations = mega_store.get_observations(
+#             mega_table[data_mask]["OBS_ID"], required_irf="all-optional"
+#         )
+#     return observations
 
 
 def run_make_background(config) -> dict:
@@ -368,16 +363,11 @@ def run_make_background(config) -> dict:
 
     Parameters
     ----------
-    config   - dict
-        dictionary containing cofigurations details
-
-
+        config (dict)                       - Configuration details
 
     Returns
     ----------
-    config   - dict
-        dictionary containing cofigurations details
-
+        config (dict)                       - Modified configuration of background attached runs
     """
     in_dir = config["io"]["in_dir"]
     out_dir = config["io"]["out_dir"]

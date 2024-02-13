@@ -10,6 +10,8 @@ from gammapy.catalog import SourceCatalog3HWC, SourceCatalogGammaCat
 
 # Gammapy stuff
 from gammapy.irf import Background2D
+from gammapy.maps import MapAxis
+from gammapy.data import Observation
 from scipy.ndimage import gaussian_filter
 
 
@@ -21,24 +23,27 @@ class BackgroundModelEstimator:
     """
 
     def __init__(
-        self, energy, offset, smooth=False, excluded_sources=[], smooth_sigma=1
+        self,
+        energy: MapAxis,
+        offset: MapAxis,
+        smooth: bool = False,
+        excluded_sources: list = [],
+        smooth_sigma: float = 1,
     ) -> None:
         """BackgroundModelEstimator class for estimating the background from runs
 
         Parameters
         ----------
-        energy   - MapAxis
-            Energy binning to be used
-        offset - MapAxis
-            Offset (to the camera centre) binning to be used
-        smooth - bool
-            Whether or not smooth the background (defaul  False)
-        excluded_sources - list[astropy.coordinates]
-            list of sources to be excluded (ToDo)'
+            energy (MapAxis)                    - Energy binning to be used
+            offset (MapAxis)                    - Offset (to the camera centre) binning to be used
+            smooth (bool)                       - Whether or not smooth the background
+                                                 (default  False)
+            excluded_sources (list)             - list of sources to be excluded
+                                                 (astropy.coordinates.Skycoords)
 
         Returns
         ----------
-        None
+            None
 
         """
 
@@ -75,37 +80,32 @@ class BackgroundModelEstimator:
         self.hawc = SourceCatalog3HWC("$GAMMAPY_DATA/catalogs/3HWC.ecsv")
 
     @staticmethod
-    def _make_bkg2d(energy, offset, unit) -> Background2D:
+    def _make_bkg2d(energy: MapAxis, offset: MapAxis, unit: str) -> Background2D:
         """Get a 2D background with the desired axes
 
         Parameters
         ----------
-        energy      - MapAxis
-            Energy binning to be used
-        offset      - MapAxis
-            Offset (to the camera centre) binning to be used
-        unit        - str
-            unit of the background
+            energy (MapAxis)                    - Energy binning
+            offset (MapAxis)                    - Offset (to the camera centre) binning
+            unit (str)                          - unit of the background
 
         Returns
         ----------
-        bkg         - Background2D
-            Empty 2D background
+            bkg (Background2D)                  - Empty 2D background
         """
         return Background2D(axes=[energy, offset], unit=unit)
 
-    def run(self, observations) -> None:
+    def run(self, observations: list) -> None:
         """Generate background by stacking multiple backgrounds
 
         Parameters
         ----------
-        observations    - list
-            list of obserations for generating backgrounds
+            observations (list)                 - Obserations for generating backgrounds
 
 
         Returns
         ----------
-        None
+            None
 
         """
         for obs in observations:
@@ -113,18 +113,17 @@ class BackgroundModelEstimator:
 
     #             self.fill_exposure(obs)
 
-    def fill_counts(self, obs) -> None:
+    def fill_counts(self, obs: Observation) -> None:
         """Fill the counts histograms for determining the background rate
 
         Parameters
         ----------
-        obs     - observation
-            Gammapy observation of events
+            obs (Observation)                   - Gammapy observation of events
 
 
         Returns
         ----------
-        None
+            None
 
         """
         events = obs.events
@@ -162,23 +161,25 @@ class BackgroundModelEstimator:
         self.exposure.quantity += exposure * (counts_exc / counts_all)
 
     # This could also be an exclusion file...
-    def exclude_known_sources(self, obs, rad=0.4, run_mask=None) -> np.array:
+    def exclude_known_sources(
+        self,
+        obs: Observation,
+        rad: float = 0.4,
+        run_mask: np.array = None,
+    ) -> np.array:
         """Exclude known sources from the background calculation
 
         Parameters
         ----------
-        obs     - observation
-            Gammapy observation of events
-        rad     - float
-            radius of the exclusion region
-        run_mask - np.array
-            boolean array of if an event is to be included (default None)
+            obs (Observation)                   - Gammapy observation of events
+            rad (float)                         - radius of the exclusion region
+            run_mask (np.array)                 - boolean array of if an event is to be included
+                                                  (default None)
 
 
         Returns
         ----------
-        run_mask - np.array
-            boolean array of if an event is to be included
+            run_mask (np.array)                 - boolean array of if an event is to be included
 
         """
 
@@ -236,25 +237,29 @@ class BackgroundModelEstimator:
         return run_mask
 
     # This could be sped up with a bright star file...
-    def exclude_bright_stars(self, obs, rad=0.35, mag=8, run_mask=None) -> np.array:
+    def exclude_bright_stars(
+        self,
+        obs: Observation,
+        rad: float = 0.35,
+        mag: float = 8,
+        run_mask: np.array = None,
+    ) -> np.array:
         """Exclude bright stars from the background calculation
 
         Parameters
         ----------
-        obs     - observation
-            Gammapy observation of events
-        rad     - float
-            radius of the exclusion region (default 0.35 deg)
-        mag     - float
-            magnitude below which stars are excluded (default 8)
-        run_mask - np.array
-            boolean array of if an event is to be included (default None)
+            obs (Observation)                   - Gammapy observation of events
+            rad (float)                         - radius of the exclusion region
+                                                  default 0.35 deg
+            mag (float)                         - magnitude below which stars are excluded
+                                                  default 8.0
+            run_mask (np.array)                 - boolean array of if an event is to be included
+                                                  default None
 
 
         Returns
         ----------
-        run_mask - np.array
-            boolean array of if an event is to be included
+            run_mask (np.array)                 - boolean array of if an event is to be included
 
         """
         if run_mask is None:
@@ -288,13 +293,12 @@ class BackgroundModelEstimator:
 
         Parameters
         ----------
-        None
+            None
 
 
         Returns
         ----------
-        rate - Background2D
-            2D background rate
+            rate (Background2D)                 - 2D background rate
         """
         rate = deepcopy(self.counts)
 
@@ -306,21 +310,18 @@ class BackgroundModelEstimator:
         return rate
 
 
-def smooth(bkg, sigma=1) -> Background2D:
+def smooth(bkg: Background2D, sigma: float = 1.0) -> Background2D:
     """Smooths background rates from BackgroundModelEstimator.background_rate (bkg input)
 
 
     Parameters
     ----------
-    bkg   - gammapy.irf.Background2D
-        2D background to be smoothed
-    sigma - float
-        sigma of the gaussian for smoothing
+        bkg (Background2D)                      - 2D background to be smoothed
+        sigma (float)                           - sigma of the gaussian for smoothing
 
     Returns
     ----------
-    bkg   - gammapy.irf.Background2D
-        Smoothed 2D background
+        bkg (Background2D)                      - Smoothed 2D background
 
     """
     bkg_3d = bkg.to_3d()
