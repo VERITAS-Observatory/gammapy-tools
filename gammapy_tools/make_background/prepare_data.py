@@ -51,7 +51,16 @@ def prepare_dataset(config):
         os.mkdir(results_dir)
 
     # Copy
-    data_store.copy_obs(obs_in_db, in_dir)
+    try:
+        data_store.copy_obs(obs_in_db, in_dir)
+    except Exception as e:
+        if len(obs_in_db) == 0:
+            raise RuntimeError(
+                f"Observations cannot be found in {db_dir}, do these files exist?"
+            ) from e
+        else:
+            raise RuntimeError("Error copying files") from e
+
     # Update new config
     config["run_selection"]["runlist"] = obs_in_db
     config["run_selection"]["missing_runs"] = missing_in_db
