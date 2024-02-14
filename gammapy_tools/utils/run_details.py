@@ -1,21 +1,23 @@
 import numpy as np
+from astropy.io.fits import HDUList
 from astropy.time import Time
+from astropy.table import Table
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 
 
-def get_obs_details(hdul):
+def get_obs_details(hdul: HDUList) -> tuple[float, float, float]:
     """Find the run conditions
 
     Parameters
     ----------
-    hdul : HDUList of the dl3 file
+    hdul (HDUList)                              - HDUL of the dl3 file
 
     Returns
     ----------
-        zen  - Zenith angle of the observation
-        nsb   - NSB Level of the observation
-        az    - Azimuth angle of the observation
+        zen (float)                             - Zenith angle of the observation
+        nsb (float)                             - NSB Level of the observation
+        az  (float)                             - Azimuth angle of the observation
     """
 
     zen = 90 - float(hdul[1].header["ALT_PNT"])
@@ -25,18 +27,18 @@ def get_obs_details(hdul):
     return zen, az, nsb
 
 
-def get_epoch(hdul) -> (float, list):
+def get_epoch(hdul: HDUList) -> tuple[Time, float, dict]:
     """Find the epoch cooresponding to the run
 
     Parameters
     ----------
-    hdul : HDUList of the dl3 file
+    hdul (HDUList)                              - HDUL of the dl3 file
 
     Returns
     ----------
-        tobs    - Time of the observation
-        obs_id  - Observations ID
-        season  - Relevant Epoch dictionary entry
+        tobs (astropy.time.Time)                - Time of the observation
+        obs_id (str)                            - Observations ID
+        season (dict)                            - Relevant Epoch dictionary entry
     """
     epochs = {
         "V4": {"tstart": Time("2000-01-01"), "tstop": Time("2009-09-13")},
@@ -73,20 +75,23 @@ def get_epoch(hdul) -> (float, list):
     return tobs, obs_id, season
 
 
-def find_data_mimic(hdul, config, obs_table) -> (list, float):
+def find_data_mimic(
+    hdul: HDUList, config: dict, obs_table: Table
+) -> tuple[np.ndarray, float]:
     """Find background data from an obs_table
 
     Parameters
     ----------
-        hdul    - HDUList of the dl3 file
-        config  - Dictionary containing cofigurations details
+        hdul (HDUList)                          - HDUL of the dl3 file
+        config (dict)                           - Cofigurations details
+        obs_table (astropy.table.Table)         - Observations table
 
 
 
     Returns
     ----------
-        data_mask   - Mask to be applied to the obs_table with selected data
-        livetime    - Livetime of the selected data
+        data_mask (numpy.ndarray)               - Mask to be applied to the obs_table
+        livetime (float)                        - Livetime of the selected data
 
     """
     try:

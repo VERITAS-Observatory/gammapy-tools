@@ -16,19 +16,19 @@ from ..utils import get_cdf
 from ..utils.run_details import find_data_mimic
 
 
-def kl_divergence(data1: np.array, data2: np.array) -> float:
+def kl_divergence(data1: np.ndarray, data2: np.ndarray) -> float:
     """Calculate the Kullback-Leibler Divergence.
     This provides a metric for comparing two 2D distributions
 
     Parameters
     ----------
-        data1 (numpy.array)         - Array to compare against.
-        data2 (numpy.array)         - Array to compare.
+        data1 (numpy.ndarray)                   - Array to compare against.
+        data2 (numpy.ndarray)                   - Array to compare.
 
 
     Returns
     ----------
-        kl  (float)                 - KL Divergence score.
+        kl  (float)                             - KL Divergence score.
 
     """
     kl = data1 * np.log(data1 / data2)
@@ -36,17 +36,17 @@ def kl_divergence(data1: np.array, data2: np.array) -> float:
     return kl
 
 
-def get_background(filename: str) -> np.array:
+def get_background(filename: str) -> np.ndarray:
     """Get the background from a fits file
 
     Parameters
     ----------
-        filename (str)              - Name of the file to be read in.
+        filename (str)                          - Name of the file to be read in.
 
 
     Returns
     ----------
-        data (numpy.array)          - Background.
+        data (numpy.ndarray)                    - Background.
 
     """
     with fits.open(filename) as hdul:
@@ -58,20 +58,20 @@ def get_background(filename: str) -> np.array:
     return data
 
 
-def analyze_data(data: np.array, obs: int, sub_tab: Table, search_dir: str) -> float:
+def analyze_data(data: np.ndarray, obs: int, sub_tab: Table, search_dir: str) -> float:
     """Get the KL Divergence for an observation
 
     Parameters
     ----------
-        data (numpy.array)          - Reference distribution.
-        obs (int)                   - Observation ID of interest.
-        sub_tab (astropy.table)     - Table of observations for searching.
-        search_dir (str)            - Directory to search for the observation.
+        data (numpy.ndarray)                    - Reference distribution.
+        obs (int)                               - Observation ID of interest.
+        sub_tab (astropy.table)                 - Table of observations for searching.
+        search_dir (str)                        - Directory to search for the observation.
 
 
     Returns
     ----------
-        kl_div (float)              - KL Divergence.
+        kl_div (float)                          - KL Divergence.
 
     """
     of_interest = sub_tab["OBS_ID"] == obs
@@ -95,27 +95,29 @@ def process_run(
     bmimic: bool = False,
     overwrite: bool = False,
     njobs: int = None,
-) -> list:
+) -> Table:
     """Calculate the KL Divergence for a set of observations
 
     Parameters
     ----------
-        obs_id (int)                - Observation of interest.
-        config (dict)               - Configuration dictionary.
-        output_name (str)           - Name of the file to save the results to.
-                                      Defaults to None, if None not file is written
-        search_runs (list)          - List of runs to calculate the KL divergence for.
-                                      Defaults to None
-        bmimic (bool)               - If the mimic critera is used to find the `search_runs`.
-                                      Defaults to False.
-        overwrite (bool)            - Overwrite the file specified by `output_name`.
-                                      Defaults to False.
-        njobs (int)                  - Number of parallel jobs to run. Defaults to `njobs-1`.
+        obs_id (int)                            - Observation of interest.
+        config (dict)                           - Configuration dictionary.
+        output_name (str)                       - Name of the file to save the results to.
+                                                  Defaults to None, if None not file is written
+        search_runs (list)                      - List of runs to calculate the KL divergence for.
+                                                  Defaults to None
+        bmimic (bool)                           - If the mimic critera is used to find
+                                                  the `search_runs`.
+                                                  Defaults to False.
+        overwrite (bool)                        - Overwrite the file specified by `output_name`.
+                                                  Defaults to False.
+        njobs (int)                             - Number of parallel jobs to run.
+                                                  Defaults to `njobs-1`.
 
 
     Returns
     ----------
-        res (list)                  - List of KL divergence
+        obs_info (astropy.table.Table)          - Table including KL divergence
 
     """
     search_dir = config["io"]["search_datastore"]
@@ -173,13 +175,13 @@ def get_requested_exposure(obs_table: Table, tobs: float) -> Table:
 
     Parameters
     ----------
-        obs_table (astropy.table)   - Table of observations.
-        tobs (float)                - Requested background exposure (hours)
+        obs_table (astropy.table.Table)         - Table of observations.
+        tobs (float)                            - Requested background exposure (hours)
 
 
     Returns
     ----------
-        res (list)                  - List of runs to use
+        obs (astropy.table.Table)               - Table of runs to use
 
     """
 

@@ -8,22 +8,22 @@ import numpy as np
 
 
 def get_cdf(
-    arr: np.array, weights: np.array = None, normalize: bool = True
+    arr: np.array, weights: np.ndarray = None, normalize: bool = True
 ) -> np.array:
     """Get the continious distribution function for a given array
 
     Parameters
     ----------
-        arr (numpy.array)           - Array to get the CDF of.
-        weights (numpy.array)       - Weights for each array element.
-                                      Defaults to None -> weights = 1
-        norm (bool)                 - If the CDF should be normalized to 1.
-                                      Defaults to True
-                                      If false the cumulative distribution is returned
+        arr (np.ndarray)                        - Array to get the CDF of.
+        weights (np.ndarray)                    - Weights for each array element.
+                                                  Defaults to None -> weights = 1
+        norm (bool)                             - If the CDF should be normalized to 1.
+                                                  Defaults to True
+                                                  If false the cumulative distribution is returned
 
     Returns
     ----------
-        cdf (numpy.array)            - CDF of the `arr`
+        cdf (np.ndarray)            - CDF of the `arr`
 
     """
 

@@ -165,21 +165,21 @@ class BackgroundModelEstimator:
         self,
         obs: Observation,
         rad: float = 0.4,
-        run_mask: np.array = None,
-    ) -> np.array:
+        run_mask: np.ndarray = None,
+    ) -> np.ndarray:
         """Exclude known sources from the background calculation
 
         Parameters
         ----------
             obs (Observation)                   - Gammapy observation of events
             rad (float)                         - radius of the exclusion region
-            run_mask (np.array)                 - boolean array of if an event is to be included
+            run_mask (np.ndarray)               - boolean array of if an event is to be included
                                                   (default None)
 
 
         Returns
         ----------
-            run_mask (np.array)                 - boolean array of if an event is to be included
+            run_mask (np.ndarray)               - boolean array of if an event is to be included
 
         """
 
@@ -242,8 +242,8 @@ class BackgroundModelEstimator:
         obs: Observation,
         rad: float = 0.35,
         mag: float = 8,
-        run_mask: np.array = None,
-    ) -> np.array:
+        run_mask: np.ndarray = None,
+    ) -> np.ndarray:
         """Exclude bright stars from the background calculation
 
         Parameters
@@ -253,13 +253,13 @@ class BackgroundModelEstimator:
                                                   default 0.35 deg
             mag (float)                         - magnitude below which stars are excluded
                                                   default 8.0
-            run_mask (np.array)                 - boolean array of if an event is to be included
+            run_mask (np.ndarray)               - boolean array of if an event is to be included
                                                   default None
 
 
         Returns
         ----------
-            run_mask (np.array)                 - boolean array of if an event is to be included
+            run_mask (np.ndarray)               - boolean array of if an event is to be included
 
         """
         if run_mask is None:
