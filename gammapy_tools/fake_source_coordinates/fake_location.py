@@ -16,17 +16,16 @@ class LocationFaker:
     def __init__(self) -> None:
         pass
 
-    def load_target(self, filename) -> None:
+    def load_target(self, filename: str) -> None:
         """Load the target FoV from a DL3 file
 
         Parameters
         ----------
-        filename : string
-            dl3 file name
+            filename (str)                      -  dl3 file name
 
         Returns
         ----------
-        None
+            None
         """
 
         self.target_file = filename
@@ -37,17 +36,16 @@ class LocationFaker:
             self.target_obj_dec = target_hdul["EVENTS"].header["DEC_OBJ"]
             self.obs_id = target_hdul["EVENTS"].header["OBS_ID"]
 
-    def load_faked(self, filename) -> None:
+    def load_faked(self, filename: str) -> None:
         """Load the faked FoV from a DL3 file
 
         Parameters
         ----------
-        filename : string
-            dl3 file name
+            filename (str)                      - dl3 file name
 
         Returns
         ----------
-        None
+            None
         """
 
         self.faked_file = filename
@@ -62,40 +60,39 @@ class LocationFaker:
 
     def convert_fov(
         self,
-        source_file,
-        faked_file,
-        output_name,
-        overwrite=False,
-        copy_background=False,
-        scramble_point=None,
-        scramble_theta=0.3,
+        source_file: str,
+        faked_file: str,
+        output_name: str,
+        overwrite: bool = False,
+        copy_background: bool = False,
+        scramble_point: list = None,
+        scramble_theta: float = 0.3,
     ) -> None:
         """Convert the coordinates of the FoV
 
         Parameters
         ----------
-        source_file     : string
-            dl3 file name for the source fov
-        faked_file      : string
-            dl3 file name for the faked fov
-        output_name     : string
-            dl3 file name for the output file
-        overwrite       : bool
-            whether or not to overwrite output_name (default False, do not overwrite)
-        copy_background : bool
-            whether or not to copy the background from source_file
-            (default False, output_name contains faked_file's background)
-        scramble_point  : list[astropy skycoordinates]
-            Points to be scrambled (default None)
-        scramble_theta  : float or list[float]
-            Radius of the region to be scrambled and half width of anulus region of scrambling
-            (r_outter - r_inner = 2 * scramble_theta)
+            source_file (str)                   - dl3 file name for the source fov
+            faked_file (str)                    - dl3 file name for the faked fov
+            output_name (str)                   - dl3 file name for the output file
+            overwrite (bool)                    - whether or not to overwrite output_name
+                                                  (default False, do not overwrite)
+            copy_background (bool)              - whether or not to copy the background
+                                                  from source_file
+                                                  (default False, output_name contains
+                                                   faked_file's background)
+            scramble_point (list)               - Points to be scrambled list of astropy
+                                                  sky coordinates
+                                                  (default None)
+            scramble_theta (float or list)      - Radius of the region to be scrambled and
+                                                  half width of anulus region of scrambling
+                                                  (r_outter - r_inner = 2 * scramble_theta)
 
 
 
         Returns
         ----------
-        None
+            None
         """
 
         # Load in the files
@@ -112,7 +109,7 @@ class LocationFaker:
         if scramble_point is not None:
             x_to_ra = self.faked_ra
             y_to_dec = self.faked_dec
-            faked_table, _, _, _ = self.scramble_data(
+            faked_table = self.scramble_data(
                 faked_table, scramble_point, scramble_theta, x_to_ra, y_to_dec
             )
 
@@ -172,47 +169,27 @@ class LocationFaker:
         faked_hdul.writeto(output_name, overwrite=overwrite)
         target_hdul.close()
 
-    def get_cdf(self, arr) -> np.array:
-        """Calculate the Cumulative Distribution Function of an array
-
-        Parameters
-        ----------
-        arr                     : 1D numpy array
-
-        Returns
-        ----------
-        cdf                     :  CDF of array
-        """
-
-        cdf = np.zeros(len(arr))
-        cdf[0] = arr[0]
-        for i in range(1, len(arr)):
-            cdf[i] = cdf[i - 1] + arr[i]
-        # Normalize 0-1
-        return cdf / cdf[-1]
-
     def scramble_data(
-        self, tab, scramble_source, scramble_theta, ra_off, dec_off
-    ) -> (Table, list, list, list):
+        self,
+        tab: Table,
+        scramble_source: list,
+        scramble_theta: float,
+        ra_off: float,
+        dec_off: float,
+    ) -> Table:
         """Scramble events in a ring around the centre based on the distance to the source
 
         Parameters
         ----------
-        tab                     : astropy table
-            DL3 EVENTS
-        scramble_source         : list[astropy skycoordinates]
-            sources to scramble about
-        scramble_theta          : float or list of floats
-            radius of region around source to be scrambled
-        ra_off                  : float
-            Right Ascension offset (deg)
-        dec_off                 : float
-            Declination offset (deg)
+            tab (astropy.table.Table)           - Table of DL3 EVENTS
+            scramble_source (list)              - list of sources to scramble about
+            scramble_theta (float or list)      - radius of region around source to be scrambled
+            ra_off (float)                      - Right Ascension offset (deg)
+            dec_off (float)                     - Declination offset (deg)
 
         Returns
         ----------
-        tab                     : astropy table
-            scrambled DL3 EVENTS
+            tab (astropy.table.Table)           - Table of scrambled DL3 EVENTS
         """
 
         # if only a single theta is given, cast it to a list
@@ -299,4 +276,4 @@ class LocationFaker:
             tab["RA"][event_mask] = tab["Xoff"][event_mask] + ra_off
             tab["DEC"][event_mask] = tab["Yoff"][event_mask] + dec_off
 
-        return tab, dists, rnd_angs, rng_dists
+        return tab

@@ -38,7 +38,7 @@ def get_epoch(hdul: HDUList) -> tuple[Time, float, dict]:
     ----------
         tobs (astropy.time.Time)                - Time of the observation
         obs_id (str)                            - Observations ID
-        season (dict)                            - Relevant Epoch dictionary entry
+        season (dict)                           - Relevant Epoch dictionary entry
     """
     epochs = {
         "V4": {"tstart": Time("2000-01-01"), "tstop": Time("2009-09-13")},
