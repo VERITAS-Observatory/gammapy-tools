@@ -4,7 +4,9 @@ io:
     out_dir : "/gamma_data/Crab_data_runwise_backgrounds_nosmooth/"
     results_dir : "/gamma_data/Crab_data_runwise_backgrounds_nosmooth/results/"
     # Whether or not to generate the background from the run
-    from_run : False  
+    from_run : False
+    use_runlist : False
+
 
 binning:
     # Energy binning
@@ -13,8 +15,8 @@ binning:
     e_bins: 20
     # Offset/wobble binning
     off_min: 0
-    off_max: 2.5
-    off_bins: 5
+    off_max: 2.0
+    off_bins: 7
 
 config:
     njobs : 10
@@ -49,7 +51,10 @@ background_selection:
     time_max : 180
     # Whether or not to smooth the background
     smooth : False
-
+    # Sigma of the gaussian smoothing kernel
+    smooth_sigma : 1.0
+    # If we should use the KL divergence to find the background runs
+    KL_DIV : True
 
 analysis_selection:
     theta2 : 0.008
@@ -74,3 +79,28 @@ run_selection:
     # Time range (d/m/y)
     # time_min : "01/09/2007"
     # time_max : "01/09/2025"
+
+
+
+spectrum :
+    e_min : 0.2
+    e_max : 10
+    e_bins : 10
+    # Defaulting to a crab-like spectrum
+    type : "PL"
+    params : [3.48e-11,2.4]
+lightcurve:
+    bin_size_min: 1000
+sky_map:
+    map_deg: 2.5
+    exclusion_regions: []
+    theta: 0.08944272
+    on_exclusion_region: 0.35
+    ring_rin: "0.7 deg"
+    ring_width: "0.1 deg"
+    truncate: True
+    bin_size : "0.02 deg"
+    aeff_max_percent : 0.15
+    min_star_brightness : 8
+results_file: 'ls5039_results.yaml'
+plot_names: 'ls5039'
