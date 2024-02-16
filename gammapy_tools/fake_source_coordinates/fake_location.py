@@ -4,6 +4,8 @@ from astropy.io import fits
 from astropy.table import Table
 from scipy.interpolate import interp1d
 
+from ..utils import get_cdf
+
 # from copy import deepcopy
 
 
@@ -251,7 +253,7 @@ class LocationFaker:
                 rad_binsc < (dist + theta / 2.0)
             )
 
-            rad_cdf = self.get_cdf(radial[radial_mask])
+            rad_cdf = get_cdf(radial[radial_mask])
             # Use an interpolation to get any probability
             inter_rad = interp1d(
                 rad_cdf,
