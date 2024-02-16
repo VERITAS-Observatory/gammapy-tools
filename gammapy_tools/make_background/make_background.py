@@ -90,8 +90,8 @@ def get_background_for_run(parms: tuple[float, dict]) -> tuple[str, list]:
                 obs_list = kl_table["OBS_ID"]
 
             else:
-                data_mask, livetime = find_data_mimic(hdul, config, mega_table)
-                obs_list = mega_table[data_mask]["OBS_ID"]
+                obs_list, livetime = find_data_mimic(hdul, config, mega_table)
+                # obs_list = mega_table[data_mask]["OBS_ID"]
 
             config["background_selection"]["bkg_runlist"][obs] = obs_list
 

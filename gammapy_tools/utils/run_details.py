@@ -111,7 +111,6 @@ def find_data_mimic(
     el_obs = np.deg2rad(90 - zen_obs)
 
     obs_date = Time(obs_table["DATE-AVG"])
-    el = np.deg2rad(90 - obs_table["ZEN_PNT"])
 
     # Getting parameters or setting the defaults
     el_diff = (
@@ -141,30 +140,37 @@ def find_data_mimic(
     )
 
     # mask in time
-    data_mask = np.abs(obs_date - tobs) < time_max
+    sub_table = obs_table[np.abs(obs_date - tobs) < time_max]
 
     # mask in NSB
-    data_mask &= np.abs(obs_table["NSBLEVEL"] - nsb_obs) < nsb_diff
+    sub_table = sub_table[np.abs(sub_table["NSBLEVEL"] - nsb_obs) < nsb_diff]
     # mask in zenith
-    data_mask &= np.abs(1 / np.sin(el) - 1 / np.sin(el_obs)) < el_diff
+    el = np.deg2rad(90 - sub_table["ZEN_PNT"])
+    sub_table = sub_table[np.abs(1 / np.sin(el) - 1 / np.sin(el_obs)) < el_diff]
     # Mask in az
-    data_mask &= np.abs(obs_table["AZ_PNT"] - az_obs) < az_diff
+    sub_table = sub_table[np.abs(sub_table["AZ_PNT"] - az_obs) < az_diff]
     # Mask out < 4 tels
-    data_mask &= obs_table["N_TELS"] == n_tel
+    sub_table = sub_table[sub_table["N_TELS"] == n_tel]
     # Mask out galactic plane
-    data_mask &= (
-        np.abs(SkyCoord(obs_table["RA_PNT"], obs_table["DEC_PNT"]).galactic.b)
-        > 10 * u.deg
-    )
+    sub_table = sub_table[
+        (
+            np.abs(SkyCoord(sub_table["RA_PNT"], sub_table["DEC_PNT"]).galactic.b)
+            > 10 * u.deg
+        )
+    ]
     # Make sure we're not using the same run!
-    data_mask &= obs_table["OBS_ID"] != obs_id
+    sub_table = sub_table[sub_table["OBS_ID"] != obs_id]
 
     # Cutting on elevation
     if "el_min" in config["background_selection"]:
-        data_mask &= el > config["background_selection"]["el_min"]
+        el = np.deg2rad(90 - sub_table["ZEN_PNT"])
+
+        sub_table = sub_table[el > config["background_selection"]["el_min"]]
     if "el_max" in config["background_selection"]:
-        data_mask &= el < config["background_selection"]["el_max"]
+        el = np.deg2rad(90 - sub_table["ZEN_PNT"])
 
-    livetime = np.sum(obs_table[data_mask]["LIVETIME"] / 60 / 60)
+        sub_table = sub_table[el < config["background_selection"]["el_max"]]
 
-    return data_mask, livetime
+    livetime = np.sum(sub_table["LIVETIME"] / 60 / 60)
+    obs_list = sub_table["OBS_ID"]
+    return obs_list, livetime

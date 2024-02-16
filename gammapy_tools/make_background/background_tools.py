@@ -141,8 +141,8 @@ def process_run(
         obs = data_store.obs_ids
     elif bmimic:
         with fits.open(finterest) as hdul:
-            data_mask, _ = find_data_mimic(hdul, config, obs_info)
-        obs = obs_info[data_mask]["OBS_ID"]
+            obs, _ = find_data_mimic(hdul, config, obs_info)
+        # obs = obs_info[data_mask]["OBS_ID"]
     else:
         obs = search_runs
     stack = []
