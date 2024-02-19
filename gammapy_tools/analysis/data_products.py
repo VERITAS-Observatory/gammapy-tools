@@ -29,25 +29,28 @@ from gammapy.modeling.models import (
     PowerLawSpectralModel,
     LogParabolaSpectralModel,
     SkyModel,
+    Model,
 )
 from gammapy.estimators import LightCurveEstimator
 
 
-def make_spectrum_RE(config, plot=True):
+def make_spectrum_RE(
+    config: dict, plot: bool = True
+) -> (FluxPointsDataset, Model, np.array, np.array):
     """Make a RE spectrum
 
     Parameters
     ----------
-    observations: list of gammapy Observations object
-    source_pos: astropy coordinates object containing source coordinates
-    config: config file
+        observations (list)                 - List of gammapy Observations object
+        source_pos (astropy.SkyCoord)       - Source coordinates
+        config (dict)                       - config file
 
     Returns
     ----------
-    flux_points: spectral flux points object
-    spectral_model: best-fit spectral model object
-    time: time for cumulative significance
-    sig: sqrt(ts) for cumulative significance
+        flux_points (FluxPointsEstimator)   - spectral flux points object
+        spectral_model (SkyModel)           - best-fit spectral model object
+        time (array)                        - time for cumulative significance
+        sig (array)                         - sqrt(ts) for cumulative significance
     """
 
     e_min = config["spectrum"]["e_min"]
@@ -239,10 +242,12 @@ def get_flux_lc(config, type="flux"):
 
     Parameters
     ----------
-    observations: list of gammapy Observations object
-    config: configuration file
-    type: default = 'flux' (integral flux for whole runlist),
-                    'runwise' (run by run flux points), 'custom' (time bins from config)
+    observations (list)                     - list of gammapy Observations object
+    config (dict)                           - configuration file
+    type (str)                              - type of lc to return
+                                            (default) 'flux' (integral flux for whole runlist),
+                                            'runwise' (run by run flux points),
+                                            'custom' (time bins from config)
 
     Returns
     ----------
