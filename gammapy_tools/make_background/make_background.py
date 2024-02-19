@@ -130,6 +130,7 @@ def get_background_for_run(parms: tuple[float, dict]) -> tuple[str, list]:
             offset,
             smooth=config["background_selection"]["smooth"],
             smooth_sigma=smooth_sigma,
+            njobs=config["config"]["njobs"],
         )
         estimator.run(observations)
         # Check if a background currently exists

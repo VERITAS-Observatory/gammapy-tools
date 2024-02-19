@@ -13,6 +13,7 @@ from gammapy.irf import Background2D
 from gammapy.maps import MapAxis
 from gammapy.data import Observation
 from scipy.ndimage import gaussian_filter
+from multiprocess import Pool
 
 
 class BackgroundModelEstimator:
@@ -29,6 +30,7 @@ class BackgroundModelEstimator:
         smooth: bool = False,
         excluded_sources: list = [],
         smooth_sigma: float = 1,
+        njobs: int = 0,
     ) -> None:
         """BackgroundModelEstimator class for estimating the background from runs
 
@@ -40,6 +42,7 @@ class BackgroundModelEstimator:
                                                  (default  False)
             excluded_sources (list)             - list of sources to be excluded
                                                  (astropy.coordinates.Skycoords)
+            njobs (int)                         - Number of jobs to run
 
         Returns
         ----------
@@ -47,6 +50,7 @@ class BackgroundModelEstimator:
 
         """
 
+        self.njobs = njobs
         self.counts = self._make_bkg2d(energy, offset, unit="")
         self.exposure = self._make_bkg2d(energy, offset, unit="s TeV sr")
         self.excluded_sources = excluded_sources
@@ -95,7 +99,7 @@ class BackgroundModelEstimator:
         """
         return Background2D(axes=[energy, offset], unit=unit)
 
-    def run(self, observations: list) -> None:
+    def run(self, observations: list, kwargs: dict) -> None:
         """Generate background by stacking multiple backgrounds
 
         Parameters
@@ -108,10 +112,21 @@ class BackgroundModelEstimator:
             None
 
         """
-        for obs in observations:
-            self.fill_counts(obs)
-
-    #             self.fill_exposure(obs)
+        if self.njobs == 0:
+            # Serial
+            for obs in observations:
+                counts, exposure = self.fill_counts(obs)
+                # Reduction
+                self.counts.data += counts
+                self.exposure.quantity += exposure
+        else:
+            # parallel
+            with Pool(self.njobs) as p:
+                objs = p.map(self.fill_counts, observations)
+            # Reduction
+            for counts, exposure in objs:
+                self.counts.data += counts
+                self.exposure.quantity += exposure
 
     def fill_counts(self, obs: Observation) -> None:
         """Fill the counts histograms for determining the background rate
@@ -129,6 +144,7 @@ class BackgroundModelEstimator:
         events = obs.events
 
         # Filter out regions of interest
+        # todo: file io bottleneck?
         run_mask = self.exclude_known_sources(obs)
         run_mask = self.exclude_bright_stars(obs, run_mask=run_mask)
 
@@ -142,7 +158,7 @@ class BackgroundModelEstimator:
             bins=(energy_bins, offset_bins),
         )[0]
 
-        self.counts.data += counts
+        # self.counts.data += counts
 
         # keep this all one function
         # All events
@@ -158,7 +174,8 @@ class BackgroundModelEstimator:
         exposure = 2 * np.pi * offset * time * axes.bin_volume()
 
         # Scale exposure by fraction of events accepted
-        self.exposure.quantity += exposure * (counts_exc / counts_all)
+        # self.exposure.quantity += exposure * (counts_exc / counts_all)
+        return counts, exposure * (counts_exc / counts_all)
 
     # This could also be an exclusion file...
     def exclude_known_sources(
