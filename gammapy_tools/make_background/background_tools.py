@@ -10,9 +10,7 @@ from astropy.io import fits
 from astropy.table import vstack, Table
 from gammapy.data import DataStore
 from gammapy.irf import Background2D
-from gammapy.utils.deprecation import GammapyDeprecationWarning
 from multiprocess import Pool, cpu_count
-import warnings
 
 
 from ..utils import get_cdf
@@ -145,7 +143,7 @@ def process_run(
         obs = data_store.obs_ids
     elif bmimic:
         with fits.open(finterest) as hdul:
-            print(f"Finding mimic data for {obs_id}")
+            # print(f"Finding mimic data for {obs_id}")
             obs, _ = find_data_mimic(hdul, config, obs_info)
         # obs = obs_info[data_mask]["OBS_ID"]
     else:
@@ -167,12 +165,8 @@ def process_run(
         def call_obs(x):
             return analyze_data(data_interest, x, sub_tab, search_dir)
 
-        with warnings.catch_warnings():
-            warnings.filterwarnings(
-                "default", category=GammapyDeprecationWarning, module="gammapy"
-            )
-            print(f"Analyzing data for {obs_id}, (njobs = {njobs})")
-            res = pool.map(call_obs, obs)
+        # print(f"Analyzing data for {obs_id}, (njobs = {njobs})")
+        res = pool.map(call_obs, obs)
 
     obs_info["KL_DIV"] = res
     if output_name is not None:

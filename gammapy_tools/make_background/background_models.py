@@ -129,7 +129,7 @@ class BackgroundModelEstimator:
                 self.counts.data += counts
                 self.exposure.quantity += exposure
 
-    def fill_counts(self, obs: Observation) -> None:
+    def fill_counts(self, obs: Observation) -> tuple[np.ndarray, np.ndarray]:
         """Fill the counts histograms for determining the background rate
 
         Parameters
@@ -139,7 +139,9 @@ class BackgroundModelEstimator:
 
         Returns
         ----------
-            None
+            background counts (np.ndarray)      - Background counts
+            exposure (np.ndarray)               - 2D Exposure
+
 
         """
         events = obs.events
