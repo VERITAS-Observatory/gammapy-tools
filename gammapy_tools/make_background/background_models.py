@@ -2,18 +2,19 @@ import os
 from copy import deepcopy
 
 import numpy as np
+from scipy.ndimage import gaussian_filter
+from multiprocess import Pool
 
 # Astropy stuff
 from astropy import units as u
 from astropy.table import Table
-from gammapy.catalog import SourceCatalog3HWC, SourceCatalogGammaCat
+
 
 # Gammapy stuff
 from gammapy.irf import Background2D
 from gammapy.maps import MapAxis
 from gammapy.data import Observation
-from scipy.ndimage import gaussian_filter
-from multiprocess import Pool
+from gammapy.catalog import SourceCatalog3HWC, SourceCatalogGammaCat
 
 
 class BackgroundModelEstimator:
@@ -99,7 +100,7 @@ class BackgroundModelEstimator:
         """
         return Background2D(axes=[energy, offset], unit=unit)
 
-    def run(self, observations: list, kwargs: dict) -> None:
+    def run(self, observations: list) -> None:
         """Generate background by stacking multiple backgrounds
 
         Parameters
@@ -207,8 +208,8 @@ class BackgroundModelEstimator:
         # Sources nearby
         gamma_cat_reduced_mask = (
             np.sqrt(
-                (self.cat.table["ra"] - obs.fixed_pointing_info.radec.ra.deg) ** 2
-                + (self.cat.table["dec"] - obs.fixed_pointing_info.radec.dec.deg) ** 2
+                (self.cat.table["ra"] - obs.pointing.radec.ra.deg) ** 2
+                + (self.cat.table["dec"] - obs.pointing.radec.dec.deg) ** 2
             )
             < 2.5
         )
@@ -235,8 +236,8 @@ class BackgroundModelEstimator:
         # Sources nearby
         hawc_reduced_mask = (
             np.sqrt(
-                (self.hawc.table["ra"] - obs.fixed_pointing_info.radec.ra.deg) ** 2
-                + (self.hawc.table["dec"] - obs.fixed_pointing_info.radec.dec.deg) ** 2
+                (self.hawc.table["ra"] - obs.pointing.radec.ra.deg) ** 2
+                + (self.hawc.table["dec"] - obs.pointing.radec.dec.deg) ** 2
             )
             < 2.5
         )
@@ -285,8 +286,8 @@ class BackgroundModelEstimator:
         # Look for stars above a mag cut and within the FoV
         srcs_mask = (
             np.sqrt(
-                (self.star_cat["ra"] - obs.fixed_pointing_info.radec.ra.deg) ** 2
-                + (self.star_cat["dec"] - obs.fixed_pointing_info.radec.dec.deg) ** 2
+                (self.star_cat["ra"] - obs.pointing.radec.ra.deg) ** 2
+                + (self.star_cat["dec"] - obs.pointing.radec.dec.deg) ** 2
             )
             < 2.0
         )
@@ -300,6 +301,7 @@ class BackgroundModelEstimator:
                 )
                 > rad * u.deg
             )
+
         return run_mask
 
     @property

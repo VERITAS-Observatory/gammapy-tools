@@ -132,6 +132,7 @@ def get_background_for_run(parms: tuple[float, dict]) -> tuple[str, list]:
             smooth_sigma=smooth_sigma,
             njobs=config["config"]["njobs"],
         )
+
         estimator.run(observations)
         # Check if a background currently exists
         if "BACKGROUND" in hdul:
