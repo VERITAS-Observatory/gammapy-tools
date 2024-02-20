@@ -2,6 +2,9 @@ import logging
 import yaml
 import numpy as np
 from scipy.stats import norm
+from IPython.display import display
+import os
+from astropy.io import fits
 
 # %matplotlib inline
 import astropy.units as u
@@ -14,6 +17,7 @@ from gammapy.analysis import Analysis, AnalysisConfig
 from gammapy.datasets import MapDatasetOnOff
 from gammapy.estimators import ExcessMapEstimator
 from gammapy.makers import RingBackgroundMaker
+from gammapy.data import DataStore
 
 from gammapy.modeling.models import PowerLawSpectralModel
 
@@ -42,20 +46,30 @@ def rbm_analysis(config):
         significance_map_off: background significance map
     """
 
-    # get position from ra/dec [deg]
-    source_pos = SkyCoord(
-        config["run_selection"]["source_ra"],
-        config["run_selection"]["source_dec"],
-        frame="icrs",
-        unit="deg",
-    )
-
     data_store = config["io"]["out_dir"]
 
     map_deg = config["sky_map"]["map_deg"]
     source_config = AnalysisConfig()
     source_config.datasets.type = "3d"
     source_config.observations.datastore = data_store
+    
+    #select only observations from runlist, if specified
+    if config["io"]["from_runlist"]:
+        source_config.observations.obs_ids = np.genfromtxt(config["io"]["runlist"],unpack=True).tolist()
+    
+    if config["run_selection"]["pos_from_DL3"]:
+        #get RA and DEC from first run
+        hdul = fits.open(config["io"]["out_dir"]+os.listdir(config["io"]["out_dir"])[0])
+        source_pos = SkyCoord(hdul[1].header["RA_OBJ"]*u.deg, hdul[1].header["DEC_OBJ"]*u.deg)
+    
+    else:
+        source_pos = SkyCoord(
+            config["run_selection"]["source_ra"],
+            config["run_selection"]["source_dec"],
+            frame="icrs",
+            unit="deg",
+        )
+    
     source_config.datasets.geom.wcs.skydir = {
         "lon": source_pos.ra,
         "lat": source_pos.dec,
@@ -79,15 +93,13 @@ def rbm_analysis(config):
     source_config.datasets.geom.axes.energy.max = "100 TeV"
     source_config.datasets.geom.axes.energy.nbins = 30
 
-    source_config.excess_map.correlation_radius = f"{np.sqrt(0.008)} deg"
-
+    source_config.excess_map.correlation_radius = str(config["sky_map"]["theta"]) +  " deg"
+    
     # We need to extract the ring for each observation separately, hence, no stacking at this stage
     source_config.datasets.stack = False
 
-    source_config.datasets.safe_mask.methods = ["aeff-max"]
-    source_config.datasets.safe_mask.parameters = {
-        "aeff_percent": config["sky_map"]["aeff_max_percent"]
-    }
+    source_config.datasets.safe_mask.parameters = {'aeff_percent':config["sky_map"]["aeff_max_percent"], 'offset_max':config["sky_map"]["offset_max"]*u.deg}
+    source_config.datasets.safe_mask.methods = ['aeff-max','offset-max']
 
     analysis = Analysis(source_config)
 
@@ -184,8 +196,8 @@ def rbm_analysis(config):
     sigma = output_dict["sqrt_ts"]
     exposure = output_dict["ontime"]
 
-    # significance_map_off = significance_map * exclusion_mask
-    # significance_map_off = significance_map[exclusion_mask]
+    #significance_map_off = significance_map * exclusion_mask
+    #significance_map_off = significance_map[exclusion_mask]
 
     return (
         counts,
@@ -196,6 +208,7 @@ def rbm_analysis(config):
         excess_map,
         exposure,
         significance_map,
+        significance_map_off,
         exclusion_mask,
     )
 
@@ -209,6 +222,7 @@ def rbm_plots(
     c_sig,
     c_time,
     save=True,
+    plot=True,
 ):
     """
     Makes + optionally saves significance/excess maps,
@@ -287,8 +301,10 @@ def rbm_plots(
         format="png",
         bbox_inches="tight",
     )
-    plt.show()
-
+    if plot:
+        plt.show()
+    else:
+        plt.clf()
     # cumulative significance
     plt.plot(c_time, c_sig, "ko")
     plt.xlabel("Time [h]")
@@ -299,7 +315,10 @@ def rbm_plots(
         format="png",
         bbox_inches="tight",
     )
-    plt.show()
+    if plot:
+        plt.show()
+    else:
+        plt.clf()
 
     # spectral points
     spectral_points.plot(sed_type="dnde")
@@ -308,6 +327,8 @@ def rbm_plots(
         format="png",
         bbox_inches="tight",
     )
+    if plot:
+        plt.show()
 
     return
 
@@ -327,6 +348,7 @@ def write_validation_info(
     norm_err = spectab["error"][1]
 
     output_dict = {
+        "analysis notebook version": 1.0,
         "source": config["run_selection"]["source_name"],
         "gammapy version": gammapy.__version__,
         "exposure": float(exposure.value) / 60,
