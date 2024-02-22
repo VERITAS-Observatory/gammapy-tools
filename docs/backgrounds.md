@@ -12,7 +12,7 @@ When using config files, set `config["io"]["from_run"] = False` to generate a ba
 
 Selecting runs to use for generating backgrounds, we can use the [Kullback-Leibler Divergence](https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence) to estimate the statistical distance between the two distributions (P and Q).
 
-$$ KL_{div} = \sum_i P(x_i) \log\left(\frac{P(x_i)}{Q_i}\right)$$
+$$ KL_{div} = \sum_i P(x_i) \log\left(\frac{P(x_i)}{Q(x_i)}\right)$$
 
 ```python
 def kl_divergence(data1: np.ndarray, data2: np.ndarray) -> float:
