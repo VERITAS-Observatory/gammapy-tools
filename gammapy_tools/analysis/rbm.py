@@ -43,7 +43,6 @@ def rbm_analysis(config):
         sigma: significance at the source location (defined in the config file)
         excess_map: map of excess counts
         significance_map: significance map
-        significance_map_off: background significance map
     """
 
     data_store = config["io"]["out_dir"]
@@ -82,7 +81,7 @@ def rbm_analysis(config):
         "width": f"{map_deg} deg",
         "height": f"{map_deg} deg",
     }
-    source_config.datasets.geom.wcs.binsize = config["sky_map"]["bin_size"]
+    source_config.datasets.geom.wcs.binsize = config["sky_map"]["bin_sz"] * u.deg
     source_config.datasets.map_selection = ["counts", "exposure", "background", "edisp"]
 
     # Cutout size (for the run-wise event selection)
@@ -208,7 +207,6 @@ def rbm_analysis(config):
         excess_map,
         exposure,
         significance_map,
-        significance_map_off,
         exclusion_mask,
     )
 
@@ -218,9 +216,9 @@ def rbm_plots(
     spectral_points,
     excess_map,
     significance_map,
-    exclusion_mask,
     c_sig,
     c_time,
+    exclusion_mask,
     save=True,
     plot=True,
 ):
@@ -256,12 +254,12 @@ def rbm_plots(
         config["plot_names"] + "sig_excess.png", format="png", bbox_inches="tight"
     )
     plt.show()
+    
+    significance_map_off = significance_map * exclusion_mask
 
     # significance distribution
     significance_all = significance_map.data[np.isfinite(significance_map.data)]
-    significance_off = significance_map.data[
-        np.isfinite(significance_map.data) & exclusion_mask
-    ]
+    significance_off = significance_map_off.data[np.isfinite(significance_map_off.data)]
 
     fig, ax = plt.subplots()
     ax.hist(
@@ -270,16 +268,16 @@ def rbm_plots(
         alpha=0.5,
         color="red",
         label="all bins",
-        bins=np.linspace(-5, 10, 100),
+        bins=np.linspace(-5,10,50),
     )
 
     ax.hist(
-        significance_off,
+        significance_off[exclusion_mask.data.flatten()],
         density=True,
         alpha=0.5,
         color="blue",
         label="off bins",
-        bins=np.linspace(-5, 10, 100),
+        bins=np.linspace(-5,10,50),
     )
 
     # Now, fit the off distribution with a Gaussian

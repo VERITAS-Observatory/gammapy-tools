@@ -129,7 +129,7 @@ def make_spectrum_RE(config, plot=True, return_stacked=False):
     star_data = np.loadtxt(
         # environ["GAMMAPY_DATA"] + "/catalogs/Hipparcos_MAG8_1997.dat", usecols=(0, 1, 2, 3, 4)
         environ["GAMMAPY_DATA"] + "/catalogs/Hipparcos_MAG8_1997.dat",
-        usecols=(0, 1, 2, 3),
+        usecols=(0, 1, 2, 3, 4),
     )
     star_cat = Table(
         {
@@ -315,7 +315,13 @@ def get_flux_lc(config, type="flux"):
 
     # exclusion regions
     exclusion_regions = []
-
+    
+    exclusion_regions.append(
+        CircleSkyRegion(
+            center=source_pos, radius=config["sky_map"]["on_exclusion_region"] * u.deg
+        )
+    )
+    
     if (
         len(config["sky_map"]["exclusion_regions"]) > 0
     ):  # should be a list of CircleSkyRegions
@@ -344,7 +350,7 @@ def get_flux_lc(config, type="flux"):
     # exclude bright stars with 0.3 deg region (same as ED)
     star_data = np.loadtxt(
         environ["GAMMAPY_DATA"] + "/catalogs/Hipparcos_MAG8_1997.dat",
-        usecols=(0, 1, 2, 3),
+        usecols=(0, 1, 2, 3, 4),
     )
     star_cat = Table(
         {

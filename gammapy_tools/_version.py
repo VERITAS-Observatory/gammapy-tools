@@ -3,7 +3,6 @@
 TYPE_CHECKING = False
 if TYPE_CHECKING:
     from typing import Tuple, Union
-
     VERSION_TUPLE = Tuple[Union[int, str], ...]
 else:
     VERSION_TUPLE = object
@@ -13,5 +12,5 @@ __version__: str
 __version_tuple__: VERSION_TUPLE
 version_tuple: VERSION_TUPLE
 
-__version__ = version = "0.1.4.dev31+g6eebdf4.d20240216"
-__version_tuple__ = version_tuple = (0, 1, 4, "dev31", "g6eebdf4.d20240216")
+__version__ = version = '0.1.3.dev48+g1073e8f.d20240220'
+__version_tuple__ = version_tuple = (0, 1, 3, 'dev48', 'g1073e8f.d20240220')

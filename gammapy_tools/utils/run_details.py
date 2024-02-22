@@ -141,7 +141,10 @@ def find_data_mimic(
     )
 
     # mask in time
-    data_mask = np.abs(obs_date - tobs) < time_max
+    if config["background_selection"]["same_szn"]:
+        data_mask = (obs_date > list(season.values())[0]) & (obs_date < list(season.values())[1])
+    else:
+        data_mask = np.abs(obs_date - tobs) < time_max
 
     # mask in NSB
     data_mask &= np.abs(obs_table["NSBLEVEL"] - nsb_obs) < nsb_diff
