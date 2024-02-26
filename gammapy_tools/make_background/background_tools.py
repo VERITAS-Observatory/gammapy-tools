@@ -11,6 +11,8 @@ from astropy.table import vstack, Table
 from gammapy.data import DataStore
 from gammapy.irf import Background2D
 from multiprocess import Pool, cpu_count
+
+
 from ..utils import get_cdf
 
 from ..utils.run_details import find_data_mimic
@@ -137,12 +139,13 @@ def process_run(
         + data_store.hdu_table[of_interest]["FILE_NAME"][0]
     )
 
-    if search_runs is None:
+    if search_runs is not None:
         obs = data_store.obs_ids
     elif bmimic:
         with fits.open(finterest) as hdul:
-            data_mask, _ = find_data_mimic(hdul, config, obs_info)
-        obs = obs_info[data_mask]["OBS_ID"]
+            # print(f"Finding mimic data for {obs_id}")
+            obs, _ = find_data_mimic(hdul, config, obs_info)
+        # obs = obs_info[data_mask]["OBS_ID"]
     else:
         obs = search_runs
     stack = []
@@ -162,6 +165,7 @@ def process_run(
         def call_obs(x):
             return analyze_data(data_interest, x, sub_tab, search_dir)
 
+        # print(f"Analyzing data for {obs_id}, (njobs = {njobs})")
         res = pool.map(call_obs, obs)
 
     obs_info["KL_DIV"] = res
@@ -191,7 +195,7 @@ def get_requested_exposure(obs_table: Table, tobs: float) -> Table:
     obs_table = obs_table[1:]
     # Get the cumulative livetime
     cumul_obs = get_cdf(obs_table["LIVETIME"], normalize=False)
-    # Convert to hours and 1% buffer
-    mask = cumul_obs / 60 / 60 <= 1.01 * tobs
+    # Convert to hours and 10% buffer
+    mask = cumul_obs / 60 / 60 <= 1.1 * tobs
 
     return obs_table[mask]

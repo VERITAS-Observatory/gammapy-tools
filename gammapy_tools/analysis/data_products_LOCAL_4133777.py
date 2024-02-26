@@ -39,24 +39,21 @@ from gammapy.analysis import Analysis, AnalysisConfig
 from gammapy.catalog import SourceCatalogGammaCat, SourceCatalog3HWC
 from gammapy.visualization import plot_spectrum_datasets_off_regions
 
-
-def make_spectrum_RE(
-    config: dict, plot: bool = True
-) -> (FluxPointsDataset, Model, np.array, np.array):
+def make_spectrum_RE(config, plot=True, return_stacked=False):
     """Make a RE spectrum
 
     Parameters
     ----------
-        observations (list)                 - List of gammapy Observations object
-        source_pos (astropy.SkyCoord)       - Source coordinates
-        config (dict)                       - config file
+    observations: list of gammapy Observations object
+    source_pos: astropy coordinates object containing source coordinates
+    config: config file
 
     Returns
     ----------
-        flux_points (FluxPointsEstimator)   - spectral flux points object
-        spectral_model (SkyModel)           - best-fit spectral model object
-        time (array)                        - time for cumulative significance
-        sig (array)                         - sqrt(ts) for cumulative significance
+    flux_points: spectral flux points object
+    spectral_model: best-fit spectral model object
+    time: time for cumulative significance
+    sig: sqrt(ts) for cumulative significance
     """
 
     e_min = config["spectrum"]["e_min"]
@@ -89,7 +86,7 @@ def make_spectrum_RE(
     )
 
     energy_axis_true = MapAxis.from_energy_bounds(
-        0.1, 20, nbin=e_bins * 2, per_decade=True, unit="TeV", name="energy_true"
+        0.1, 100, nbin=30, per_decade=True, unit="TeV", name="energy_true"
     )
 
     geom = RegionGeom.create(region=on_region, axes=[energy_axis])
@@ -263,12 +260,10 @@ def get_flux_lc(config, type="flux"):
 
     Parameters
     ----------
-    observations (list)                     - list of gammapy Observations object
-    config (dict)                           - configuration file
-    type (str)                              - type of lc to return
-                                            (default) 'flux' (integral flux for whole runlist),
-                                            'runwise' (run by run flux points),
-                                            'custom' (time bins from config)
+    observations: list of gammapy Observations object
+    config: configuration file
+    type: default = 'flux' (integral flux for whole runlist),
+                    'runwise' (run by run flux points), 'custom' (time bins from config)
 
     Returns
     ----------
@@ -399,7 +394,7 @@ def get_flux_lc(config, type="flux"):
         containment_correction=True, selection=["counts", "exposure", "edisp"]
     )
     bkg_maker = ReflectedRegionsBackgroundMaker(exclusion_mask=exclusion_mask)
-    safe_mask_masker = SafeMaskMaker(methods=["aeff-max"], aeff_percent=10)
+    safe_mask_masker = SafeMaskMaker(methods=["aeff-max"], aeff_percent=0.1)
 
     start = Time(observations[0].gti.time_start[0], format="mjd")
     stop = Time(observations[-1].gti.time_stop[0], format="mjd")

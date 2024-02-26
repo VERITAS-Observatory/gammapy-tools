@@ -33,16 +33,21 @@ from gammapy.modeling.models import (
     PowerLawSpectralModel,
     LogParabolaSpectralModel,
     SkyModel,
+    Model,
 )
 from gammapy.estimators import LightCurveEstimator
 from gammapy.analysis import Analysis, AnalysisConfig
 from gammapy.catalog import SourceCatalogGammaCat, SourceCatalog3HWC
 from gammapy.visualization import plot_spectrum_datasets_off_regions
 
+<<<<<<< HEAD
+def make_spectrum_RE(config, plot=True, return_stacked=False):
+=======
 
 def make_spectrum_RE(
     config: dict, plot: bool = True
 ) -> (FluxPointsDataset, Model, np.array, np.array):
+>>>>>>> origin/1.0_rc
     """Make a RE spectrum
 
     Parameters
@@ -89,7 +94,7 @@ def make_spectrum_RE(
     )
 
     energy_axis_true = MapAxis.from_energy_bounds(
-        0.1, 20, nbin=e_bins * 2, per_decade=True, unit="TeV", name="energy_true"
+        0.1, 100, nbin=30, per_decade=True, unit="TeV", name="energy_true"
     )
 
     geom = RegionGeom.create(region=on_region, axes=[energy_axis])
@@ -399,7 +404,7 @@ def get_flux_lc(config, type="flux"):
         containment_correction=True, selection=["counts", "exposure", "edisp"]
     )
     bkg_maker = ReflectedRegionsBackgroundMaker(exclusion_mask=exclusion_mask)
-    safe_mask_masker = SafeMaskMaker(methods=["aeff-max"], aeff_percent=10)
+    safe_mask_masker = SafeMaskMaker(methods=["aeff-max"], aeff_percent=0.1)
 
     start = Time(observations[0].gti.time_start[0], format="mjd")
     stop = Time(observations[-1].gti.time_stop[0], format="mjd")

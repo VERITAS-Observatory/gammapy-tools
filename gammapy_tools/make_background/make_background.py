@@ -91,8 +91,8 @@ def get_background_for_run(parms: tuple[float, dict]) -> tuple[str, list]:
                 obs_list = kl_table["OBS_ID"]
 
             else:
-                data_mask, livetime = find_data_mimic(hdul, config, mega_table)
-                obs_list = mega_table[data_mask]["OBS_ID"]
+                obs_list, livetime = find_data_mimic(hdul, config, mega_table)
+                # obs_list = mega_table[data_mask]["OBS_ID"]
 
             config["background_selection"]["bkg_runlist"][obs] = obs_list
 
@@ -131,7 +131,9 @@ def get_background_for_run(parms: tuple[float, dict]) -> tuple[str, list]:
             offset,
             smooth=config["background_selection"]["smooth"],
             smooth_sigma=smooth_sigma,
+            njobs=config["config"]["njobs"],
         )
+
         estimator.run(observations)
         # Check if a background currently exists
         if "BACKGROUND" in hdul:

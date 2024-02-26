@@ -159,11 +159,16 @@ class LocationFaker:
 
         if copy_background:
             try:
+
                 if "BACKGROUND" in faked_hdul:
-                    faked_hdul["BACKGROUND"] = target_hdul["BACKGROUND"]
-                else:
-                    faked_hdul.append(target_hdul["BACKGROUND"])
-                    faked_hdul[-1].name = "BACKGROUND"
+                    bkg_indx = faked_hdul.index_of("BACKGROUND")
+                    faked_hdul.pop(bkg_indx)
+                # if "BACKGROUND" in faked_hdul:
+                #     faked_hdul["BACKGROUND"] = target_hdul["BACKGROUND"]
+                # else:
+                faked_hdul.append(target_hdul["BACKGROUND"])
+                faked_hdul[-1].name = "BACKGROUND"
+
             except Exception as e:
                 print("Issue writing background")
                 print(e)

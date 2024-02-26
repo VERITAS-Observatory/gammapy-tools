@@ -1,8 +1,11 @@
 #!/bin/bash
 
+[[ "$1" ]] && IMAGE_NAME=$1  || IMAGE_NAME="gammapy-tools.sif"
+
+
 if command -v apptainer &> /dev/null
 then
-    apptainer build ./gammapy-tools.sif gammapy-tools.def
+    apptainer build ./$IMAGE_NAME gammapy-tools.def
 else
-    singularity build ./gammapy-tools.sif gammapy-tools.def
+    singularity build ./$IMAGE_NAME gammapy-tools.def
 fi
