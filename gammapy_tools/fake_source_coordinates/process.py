@@ -9,9 +9,23 @@ from glob import glob
 
 from .fake_location import LocationFaker
 from ..make_background.background_tools import process_run
+from astropy.table import Table
 
 
-def find_runs(obs, config, n):
+def find_runs(obs: int, config: dict, n: int) -> Table:
+    """Find runs to use when mimicing the dataset
+
+    Parameters
+    ----------
+        obs (int)                           - Observation ID for the observation of interest
+        config (dict)                       - Configuration dictionary
+        n (int)                             - Number of mimic runs to get
+
+
+    Returns
+    ----------
+        obs_table (astropy.table.Table)     - Table of observations suitable for mimicking
+    """
 
     # Get the KL divergence
     obs_table = process_run(
@@ -35,10 +49,8 @@ def find_runs(obs, config, n):
 
     # Mask out runs within 10% livetime
     mask = (np.abs(obs_table["LIVETIME"] - duration) / duration) < 0.1
-
-    # print (obs_table)
     obs_table = obs_table[mask]
-    # print (obs_table)
+
     # Mask out listed bright sources:
     if "bright_sources" in config["background_selection"]:
         for source in config["background_selection"]["bright_sources"]:
@@ -52,7 +64,26 @@ def find_runs(obs, config, n):
     return obs_table[:n]
 
 
-def mimic_data(config):
+def mimic_data(config: dict, randomise: bool = True) -> None:
+    """Creates mimic datasets for a runlist of interest
+
+    Loops over each observation in the configuration file and finds the
+    closest observations to be used when generating mimic datasets.
+    Final datastore generation is randomized.
+
+    Parameters
+    ----------
+        config (dict)                       - Configuration dictionary
+        randomise (bool)                    - Whether to randomise the datasets
+                                              if True (default) then a random suitable run is chosen
+                                              if False then the most simiarly run
+                                              is chosen for dataset 1, 2nd most for dataset 2,..,
+                                              nth most for dataset n.
+
+    Returns
+    ----------
+        None
+    """
 
     runlist = config["run_selection"]["runlist"]
     # Default to 5 mimic datasets
@@ -101,11 +132,13 @@ def mimic_data(config):
         if not os.path.isfile(f_target):
             continue
 
-        # print (n_mimic)
         mimic_runs = find_runs(run, config, n_mimic)
-        # print (mimic_runs)
+
+        indx = range(len(mimic_runs))
+
         # get random runs
-        indx = np.random.randint(0, len(mimic_runs), n_mimic)
+        if randomise:
+            indx = np.random.randint(0, len(mimic_runs), n_mimic)
         for i in range(n_mimic):
 
             # Make sure file exists
@@ -152,7 +185,7 @@ def mimic_data(config):
         filelist = glob(out_dir + "/*.fits*")
         index_files = glob(out_dir + "/*index.fits*")
         filelist = list(set(filelist) - set(index_files))
-        print(filelist)
+
         create_obs_hdu_index_file(filelist, out_dir)
 
         # Copy config
