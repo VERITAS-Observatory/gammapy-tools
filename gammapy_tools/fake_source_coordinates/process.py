@@ -28,18 +28,24 @@ def find_runs(obs: int, config: dict, n: int) -> Table:
     """
 
     # Get the KL divergence
-    obs_table = process_run(
-        obs,
-        config,
-        output_name=None,
-        search_runs=None,
-        bmimic=True,
-        overwrite=False,
-        njobs=config["config"]["njobs"],
-    )
+    kl_file = config["io"]["out_dir"] + f"/{obs}_kl.fits"
+
+    if os.path.isfile(kl_file):
+        obs_table = Table.read(kl_file)
+    else:
+        obs_table = process_run(
+            obs,
+            config,
+            output_name=None,
+            search_runs=None,
+            bmimic=True,
+            overwrite=False,
+            njobs=config["config"]["njobs"],
+        )
 
     # Sort by kl_div (reverse, kl should be small)
     obs_table.sort(["KL_DIV"], reverse=False)
+    # obs_table.sort(["KL_DIV"])
 
     # Duration on the run of interest
     duration = obs_table["LIVETIME"][0]
@@ -84,7 +90,6 @@ def mimic_data(config: dict, randomise: bool = True) -> None:
     ----------
         None
     """
-
     runlist = config["run_selection"]["runlist"]
     # Default to 5 mimic datasets
     n_mimic = (
@@ -121,29 +126,39 @@ def mimic_data(config: dict, randomise: bool = True) -> None:
         # Check if the run exists within the datastore
         of_interest = in_data.hdu_table["OBS_ID"] == run
 
-        f_target = (
-            search_dir
-            + "/"
-            + data_store.hdu_table[of_interest]["FILE_DIR"][0]
-            + "/"
-            + data_store.hdu_table[of_interest]["FILE_NAME"][0]
+        # f_target = (
+        #     search_dir
+        #     + "/"
+        #     + data_store.hdu_table[of_interest]["FILE_DIR"][0]
+        #     + "/"
+        #     + data_store.hdu_table[of_interest]["FILE_NAME"][0]
+        # )
+        f_target = input_dir + os.path.basename(
+            data_store.hdu_table[of_interest]["FILE_NAME"][0]
         )
 
         if not os.path.isfile(f_target):
             continue
 
-        mimic_runs = find_runs(run, config, n_mimic)
+        mimic_runs = find_runs(run, config, 10)
 
-        indx = range(len(mimic_runs))
+        # print (mimic_runs["OBJECT"])
+        indx = np.arange(len(mimic_runs))
 
         # get random runs
         if randomise:
-            indx = np.random.randint(0, len(mimic_runs), n_mimic)
+            # non repeating
+            np.random.shuffle(indx)
         for i in range(n_mimic):
 
             # Make sure file exists
             of_interest = (
                 data_store.hdu_table["OBS_ID"] == mimic_runs["OBS_ID"][indx[i]]
+            )
+
+            print(
+                f'Source Chosen: {mimic_runs["OBJECT"][indx[i]]}" +\
+                " ({mimic_runs["OBS_ID"][indx[i]]}, kl = {mimic_runs["KL_DIV"][indx[i]]})'
             )
 
             f_mimic = (
@@ -167,6 +182,7 @@ def mimic_data(config: dict, randomise: bool = True) -> None:
 
             # todo add bright sources and stars
             known_sources = [target_location]
+            # known_sources = []
 
             faker.convert_fov(
                 f_target,
