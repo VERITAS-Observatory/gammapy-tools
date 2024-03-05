@@ -32,7 +32,7 @@ Stage: build
     bash Miniforge3-$(uname)-$(uname -m).sh  -b -p /opt/conda
     . /opt/conda/bin/activate 
 
-    mamba install -c conda-forge iminuit cmasher pip matplotlib pip "jupyterlab==4.0.12"  notebook ipykernel ipython ipywidgets --yes 
+    mamba install -c conda-forge iminuit cmasher pip papermill matplotlib pip "jupyterlab==4.0.12"  notebook ipykernel ipython ipywidgets --yes 
     
     
     # Install v2dl3
