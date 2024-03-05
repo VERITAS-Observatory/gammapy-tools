@@ -2,8 +2,6 @@ import os
 import numpy as np
 import shutil
 from pyV2DL3.generateObsHduIndex import create_obs_hdu_index_file
-from astropy.coordinates import SkyCoord
-from astropy import units as U
 from gammapy.data import DataStore
 from glob import glob
 
@@ -157,8 +155,8 @@ def mimic_data(config: dict, randomise: bool = True) -> None:
             )
 
             print(
-                f'Source Chosen: {mimic_runs["OBJECT"][indx[i]]}" +\
-                " ({mimic_runs["OBS_ID"][indx[i]]}, kl = {mimic_runs["KL_DIV"][indx[i]]})'
+                f'Source Chosen: {mimic_runs["OBJECT"][indx[i]]}'
+                + f' ({mimic_runs["OBS_ID"][indx[i]]}, kl = {mimic_runs["KL_DIV"][indx[i]]:0.3f})'
             )
 
             f_mimic = (
@@ -172,17 +170,17 @@ def mimic_data(config: dict, randomise: bool = True) -> None:
                 continue
 
             # source_location
-            target_location = SkyCoord(
-                mimic_runs["RA_OBJ"][indx[i]] * U.deg,
-                mimic_runs["DEC_OBJ"][indx[i]] * U.deg,
-            )
+            # target_location = SkyCoord(
+            #     mimic_runs["RA_OBJ"][indx[i]] * U.deg,
+            #     mimic_runs["DEC_OBJ"][indx[i]] * U.deg,
+            # )
 
             # Get the output name
             f_output = input_dir + f"/mimic_{i + 1}/" + os.path.basename(f_target)
 
             # todo add bright sources and stars
-            known_sources = [target_location]
-            # known_sources = []
+            # known_sources = [target_location]
+            known_sources = []
 
             faker.convert_fov(
                 f_target,
