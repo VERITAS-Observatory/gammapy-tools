@@ -25,14 +25,14 @@ Stage: build
 
     apt update
     apt upgrade -y
-    apt install curl bash git gcc -y
+    apt install curl bash git gcc btop emacs -y
 
     # Install mamba and base env
     curl -L -O "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh"
     bash Miniforge3-$(uname)-$(uname -m).sh  -b -p /opt/conda
     . /opt/conda/bin/activate 
 
-    mamba install -c conda-forge iminuit cmasher astroquery numpy "astropy<6.0.0" pip matplotlib pip "jupyterlab==4.0.12"  notebook ipykernel ipython ipywidgets --yes 
+    mamba install -c conda-forge iminuit cmasher pip papermill matplotlib pip "jupyterlab==4.0.12"  notebook ipykernel ipython ipywidgets --yes 
     
     
     # Install v2dl3

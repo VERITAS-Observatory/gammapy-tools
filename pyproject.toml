@@ -24,18 +24,18 @@ license = { file="LICENSE" }
 
 requires-python = ">=3.9"
 dependencies = [
-    "pyyaml",
-    "numpy",
-    "astropy<6.0.0",
-    "astroquery",
-    "pymysql",
-    "pandas",
-    "tqdm",
-    "matplotlib",
-    "multiprocess",
     "gammapy==1.1",
     "pydantic<=1.10",
     "scipy==1.11.4",
+    "astropy==5.3.4",
+    "astroquery==0.4.6",
+    "gammapy==1.1",
+    "matplotlib==3.8.2",
+    "multiprocess==0.70.16",
+    "numpy==1.26.4",
+    #"pyV2DL3==0.5",
+    "PyYAML==6.0.1",
+    "regions==0.8",
 ]
 
 [project.optional-dependencies]
