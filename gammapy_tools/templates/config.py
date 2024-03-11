@@ -71,6 +71,7 @@ background_selection:
         - "3C66A"
         - "W Comae"
         - "M87"
+        - "OJ 287"
 
 
 run_selection:

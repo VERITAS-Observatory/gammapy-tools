@@ -1,6 +1,5 @@
 import os
 import numpy as np
-import shutil
 from pyV2DL3.generateObsHduIndex import create_obs_hdu_index_file
 from gammapy.data import DataStore
 from glob import glob
@@ -8,6 +7,7 @@ from glob import glob
 from .fake_location import LocationFaker
 from ..make_background.background_tools import process_run
 from astropy.table import Table
+import yaml
 
 
 def find_runs(obs: int, config: dict, n: int) -> Table:
@@ -68,7 +68,7 @@ def find_runs(obs: int, config: dict, n: int) -> Table:
     return obs_table[:n]
 
 
-def mimic_data(config: dict, randomise: bool = True) -> None:
+def mimic_data(config: dict, randomise: bool = True) -> dict:
     """Creates mimic datasets for a runlist of interest
 
     Loops over each observation in the configuration file and finds the
@@ -86,9 +86,19 @@ def mimic_data(config: dict, randomise: bool = True) -> None:
 
     Returns
     ----------
-        None
+        config (dict)                       - Updated configuration dictionary
     """
     runlist = config["run_selection"]["runlist"]
+
+    missing_runs = (
+        config["run_selection"]["missing_runs"]
+        if "missing_runs" in config["run_selection"]
+        else []
+    )
+
+    # Remove missing runs from the runlist
+    runlist = list(set(runlist) - set(missing_runs))
+
     # Default to 5 mimic datasets
     n_mimic = (
         config["background_selection"]["n_mimic"]
@@ -119,6 +129,8 @@ def mimic_data(config: dict, randomise: bool = True) -> None:
             print(error)
 
     faker = LocationFaker()
+
+    questionable_runs = []
     for run in runlist:
 
         # Check if the run exists within the datastore
@@ -140,13 +152,31 @@ def mimic_data(config: dict, randomise: bool = True) -> None:
 
         mimic_runs = find_runs(run, config, 10)
 
-        # print (mimic_runs["OBJECT"])
+        if len(mimic_runs) < 1:
+            questionable_runs.append((run, "no_mimic"))
+            print(f"No mimic runs found for {run}")
+            continue
+
+        # Mask out large KL
+        large_kl = mimic_runs["KL_DIV"] < 1.0
+        mimic_runs = mimic_runs[large_kl]
+        if len(mimic_runs) < 1:
+            questionable_runs.append((run, "large_kl"))
+            print(f"KL Value too large for {run}")
+            continue
+
         indx = np.arange(len(mimic_runs))
+
+        # Check if less than n_mimic runs are found
+        if n_mimic > len(mimic_runs):
+            n_repeat = n_mimic // len(mimic_runs)
+            indx = np.repeat(indx, n_repeat + 1)
 
         # get random runs
         if randomise:
             # non repeating
             np.random.shuffle(indx)
+
         for i in range(n_mimic):
 
             # Make sure file exists
@@ -154,10 +184,10 @@ def mimic_data(config: dict, randomise: bool = True) -> None:
                 data_store.hdu_table["OBS_ID"] == mimic_runs["OBS_ID"][indx[i]]
             )
 
-            print(
-                f'Source Chosen: {mimic_runs["OBJECT"][indx[i]]}'
-                + f' ({mimic_runs["OBS_ID"][indx[i]]}, kl = {mimic_runs["KL_DIV"][indx[i]]:0.3f})'
-            )
+            # print(
+            #     f'Source Chosen: {mimic_runs["OBJECT"][indx[i]]}'
+            #     + f' ({mimic_runs["OBS_ID"][indx[i]]}, kl = {mimic_runs["KL_DIV"][indx[i]]:0.3f})'
+            # )
 
             f_mimic = (
                 search_dir
@@ -192,6 +222,8 @@ def mimic_data(config: dict, randomise: bool = True) -> None:
                 scramble_theta=scrambe_theta,
             )
 
+    config["background_selection"]["questionable"] = questionable_runs
+
     # Make the datastores
     for i in range(n_mimic):
 
@@ -203,6 +235,16 @@ def mimic_data(config: dict, randomise: bool = True) -> None:
         create_obs_hdu_index_file(filelist, out_dir)
 
         # Copy config
-        shutil.copyfile(
-            config["io"]["in_dir"] + "/config.yaml", out_dir + "/config.yaml"
-        )
+        # shutil.copyfile(
+        #     config["io"]["in_dir"] + "/config.yaml", out_dir + "/config.yaml"
+        # )
+        with open(out_dir + "/config.yaml", "w") as outfile:
+            yaml.dump(config, outfile, default_flow_style=False)
+
+    if len(questionable_runs) > 0:
+
+        print("Consider removing the following runs:")
+        for i, (run, reason) in enumerate(questionable_runs):
+            print(f"\t{run} ({reason})")
+
+    return config
