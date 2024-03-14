@@ -7,6 +7,8 @@ from glob import glob
 from .fake_location import LocationFaker
 from ..make_background.background_tools import process_run
 from astropy.table import Table
+from astropy.coordinates import SkyCoord
+from astropy import units as U
 import yaml
 
 
@@ -200,17 +202,17 @@ def mimic_data(config: dict, randomise: bool = True) -> dict:
                 continue
 
             # source_location
-            # target_location = SkyCoord(
-            #     mimic_runs["RA_OBJ"][indx[i]] * U.deg,
-            #     mimic_runs["DEC_OBJ"][indx[i]] * U.deg,
-            # )
+            target_location = SkyCoord(
+                mimic_runs["RA_OBJ"][indx[i]] * U.deg,
+                mimic_runs["DEC_OBJ"][indx[i]] * U.deg,
+            )
 
             # Get the output name
             f_output = input_dir + f"/mimic_{i + 1}/" + os.path.basename(f_target)
 
             # todo add bright sources and stars
-            # known_sources = [target_location]
-            known_sources = []
+            known_sources = [target_location]
+            # known_sources = []
 
             faker.convert_fov(
                 f_target,
