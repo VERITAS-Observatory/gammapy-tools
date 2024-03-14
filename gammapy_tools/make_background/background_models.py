@@ -1,4 +1,3 @@
-import os
 from copy import deepcopy
 
 import numpy as np
@@ -6,15 +5,17 @@ from scipy.ndimage import gaussian_filter
 from multiprocess import Pool
 
 # Astropy stuff
-from astropy import units as u
-from astropy.table import Table
 
 
 # Gammapy stuff
 from gammapy.irf import Background2D
 from gammapy.maps import MapAxis
 from gammapy.data import Observation
-from gammapy.catalog import SourceCatalog3HWC, SourceCatalogGammaCat
+
+# from gammapy.catalog import SourceCatalog3HWC, SourceCatalogGammaCat
+
+# from here
+from ..utils import ExclusionFinder
 
 
 class BackgroundModelEstimator:
@@ -58,31 +59,33 @@ class BackgroundModelEstimator:
         self.smooth = smooth
         self.smooth_sigma = smooth_sigma
 
-        # Currelty hard coded...
-        # ToDo wrap all this into package info
-        this_dir, this_filename = os.path.split(__file__)
-        try:
-            star_path = os.path.join(this_dir, "Hipparcos_MAG8_1997.dat")
-            self.star_data = np.loadtxt(star_path, usecols=(0, 1, 2, 3), skiprows=62)
-        except Exception:
-            star_path = os.path.join(
-                os.environ.get("GAMMAPY_DATA"), "catalogs/", "Hipparcos_MAG8_1997.dat"
-            )
-            self.star_data = np.loadtxt(star_path, usecols=(0, 1, 2, 3), skiprows=62)
-        self.star_cat = Table(
-            {
-                "ra": self.star_data[:, 0],
-                "dec": self.star_data[:, 1],
-                "id": self.star_data[:, 2],
-                "mag": self.star_data[:, 3],
-            }
-        )
+        # # Currelty hard coded...
+        # # ToDo wrap all this into package info
+        # this_dir, this_filename = os.path.split(__file__)
+        # try:
+        #     star_path = os.path.join(this_dir, "Hipparcos_MAG8_1997.dat")
+        #     self.star_data = np.loadtxt(star_path, usecols=(0, 1, 2, 3), skiprows=62)
+        # except Exception:
+        #     star_path = os.path.join(
+        #         os.environ.get("GAMMAPY_DATA"), "catalogs/", "Hipparcos_MAG8_1997.dat"
+        #     )
+        #     self.star_data = np.loadtxt(star_path, usecols=(0, 1, 2, 3), skiprows=62)
+        # self.star_cat = Table(
+        #     {
+        #         "ra": self.star_data[:, 0],
+        #         "dec": self.star_data[:, 1],
+        #         "id": self.star_data[:, 2],
+        #         "mag": self.star_data[:, 3],
+        #     }
+        # )
 
-        # Assumes GAMMAPY_DATA is set
-        self.cat = SourceCatalogGammaCat(
-            "$GAMMAPY_DATA/catalogs/gammacat/gammacat.fits.gz"
-        )
-        self.hawc = SourceCatalog3HWC("$GAMMAPY_DATA/catalogs/3HWC.ecsv")
+        # # Assumes GAMMAPY_DATA is set
+        # self.cat = SourceCatalogGammaCat(
+        #     "$GAMMAPY_DATA/catalogs/gammacat/gammacat.fits.gz"
+        # )
+        # self.hawc = SourceCatalog3HWC("$GAMMAPY_DATA/catalogs/3HWC.ecsv")
+
+        self.exclusion = ExclusionFinder()
 
     @staticmethod
     def _make_bkg2d(energy: MapAxis, offset: MapAxis, unit: str) -> Background2D:
@@ -148,8 +151,13 @@ class BackgroundModelEstimator:
 
         # Filter out regions of interest
         # todo: file io bottleneck?
-        run_mask = self.exclude_known_sources(obs)
-        run_mask = self.exclude_bright_stars(obs, run_mask=run_mask)
+        # run_mask = self.exclude_known_sources(obs)
+        # run_mask = self.exclude_bright_stars(obs, run_mask=run_mask)
+        run_ra = obs.pointing.radec.ra.dec
+        run_dec = obs.pointing.radec.ra.dec
+
+        # ToDo (obriens) add custom stellar mags and exclusion size
+        run_mask = self.exclusion(obs.events.table, run_ra, run_dec)
 
         energy_bins = self.counts.axes["energy"].edges
         offset_bins = self.counts.axes["offset"].edges
@@ -181,130 +189,128 @@ class BackgroundModelEstimator:
         return counts, exposure * (counts_exc / counts_all)
 
     # This could also be an exclusion file...
-    def exclude_known_sources(
-        self,
-        obs: Observation,
-        rad: float = 0.4,
-        run_mask: np.ndarray = None,
-    ) -> np.ndarray:
-        """Exclude known sources from the background calculation
+    # def exclude_known_sources(
+    #     self,
+    #     obs: Observation,
+    #     rad: float = 0.4,
+    #     run_mask: np.ndarray = None,
+    # ) -> np.ndarray:
+    #     """Exclude known sources from the background calculation
 
-        Parameters
-        ----------
-            obs (Observation)                   - Gammapy observation of events
-            rad (float)                         - radius of the exclusion region
-            run_mask (np.ndarray)               - boolean array of if an event is to be included
-                                                  (default None)
+    #     Parameters
+    #     ----------
+    #         obs (Observation)                   - Gammapy observation of events
+    #         rad (float)                         - radius of the exclusion region
+    #         run_mask (np.ndarray)               - boolean array of if an event is to be included
+    #                                               (default None)
 
+    #     Returns
+    #     ----------
+    #         run_mask (np.ndarray)               - boolean array of if an event is to be included
 
-        Returns
-        ----------
-            run_mask (np.ndarray)               - boolean array of if an event is to be included
+    #     """
 
-        """
+    #     if run_mask is None:
+    #         run_mask = np.ones(len(obs.events.radec.ra), dtype=bool)
 
-        if run_mask is None:
-            run_mask = np.ones(len(obs.events.radec.ra), dtype=bool)
+    #     # Excluding Gammacat sources
+    #     # Sources nearby
+    #     gamma_cat_reduced_mask = (
+    #         np.sqrt(
+    #             (self.cat.table["ra"] - obs.pointing.radec.ra.deg) ** 2
+    #             + (self.cat.table["dec"] - obs.pointing.radec.dec.deg) ** 2
+    #         )
+    #         < 2.5
+    #     )
 
-        # Excluding Gammacat sources
-        # Sources nearby
-        gamma_cat_reduced_mask = (
-            np.sqrt(
-                (self.cat.table["ra"] - obs.pointing.radec.ra.deg) ** 2
-                + (self.cat.table["dec"] - obs.pointing.radec.dec.deg) ** 2
-            )
-            < 2.5
-        )
+    #     # Apply Exclusion region to FoV
+    #     for source in self.cat.table[gamma_cat_reduced_mask]:
+    #         #             print (source["common_name"])
+    #         # For extended source remove 3 times the extension?
+    #         if source["morph_type"] in ["gauss", "shell"]:
+    #             rad_ex = 3 * source["morph_sigma"] * u.deg
+    #             # print (source["common_name"], rad_ex)
+    #         else:
+    #             rad_ex = 0.35 * u.deg
 
-        # Apply Exclusion region to FoV
-        for source in self.cat.table[gamma_cat_reduced_mask]:
-            #             print (source["common_name"])
-            # For extended source remove 3 times the extension?
-            if source["morph_type"] in ["gauss", "shell"]:
-                rad_ex = 3 * source["morph_sigma"] * u.deg
-                # print (source["common_name"], rad_ex)
-            else:
-                rad_ex = 0.35 * u.deg
+    #         run_mask *= (
+    #             np.sqrt(
+    #                 (obs.events.radec.ra - source["ra"] * u.deg) ** 2
+    #                 + (obs.events.radec.dec - source["dec"] * u.deg) ** 2
+    #             )
+    #             > rad_ex
+    #         )
 
-            run_mask *= (
-                np.sqrt(
-                    (obs.events.radec.ra - source["ra"] * u.deg) ** 2
-                    + (obs.events.radec.dec - source["dec"] * u.deg) ** 2
-                )
-                > rad_ex
-            )
+    #     # Excluding HAWC sources
+    #     # Sources nearby
+    #     hawc_reduced_mask = (
+    #         np.sqrt(
+    #             (self.hawc.table["ra"] - obs.pointing.radec.ra.deg) ** 2
+    #             + (self.hawc.table["dec"] - obs.pointing.radec.dec.deg) ** 2
+    #         )
+    #         < 2.5
+    #     )
 
-        # Excluding HAWC sources
-        # Sources nearby
-        hawc_reduced_mask = (
-            np.sqrt(
-                (self.hawc.table["ra"] - obs.pointing.radec.ra.deg) ** 2
-                + (self.hawc.table["dec"] - obs.pointing.radec.dec.deg) ** 2
-            )
-            < 2.5
-        )
+    #     # Apply Exclusion region to FoV
+    #     # ToDo: Extended sources
+    #     for source in self.hawc.table[hawc_reduced_mask]:
+    #         run_mask *= (
+    #             np.sqrt(
+    #                 (obs.events.radec.ra - source["ra"] * u.deg) ** 2
+    #                 + (obs.events.radec.dec - source["dec"] * u.deg) ** 2
+    #             )
+    #             > rad * u.deg
+    #         )
+    #     return run_mask
 
-        # Apply Exclusion region to FoV
-        # ToDo: Extended sources
-        for source in self.hawc.table[hawc_reduced_mask]:
-            run_mask *= (
-                np.sqrt(
-                    (obs.events.radec.ra - source["ra"] * u.deg) ** 2
-                    + (obs.events.radec.dec - source["dec"] * u.deg) ** 2
-                )
-                > rad * u.deg
-            )
-        return run_mask
+    # # This could be sped up with a bright star file...
+    # def exclude_bright_stars(
+    #     self,
+    #     obs: Observation,
+    #     rad: float = 0.35,
+    #     mag: float = 8,
+    #     run_mask: np.ndarray = None,
+    # ) -> np.ndarray:
+    #     """Exclude bright stars from the background calculation
 
-    # This could be sped up with a bright star file...
-    def exclude_bright_stars(
-        self,
-        obs: Observation,
-        rad: float = 0.35,
-        mag: float = 8,
-        run_mask: np.ndarray = None,
-    ) -> np.ndarray:
-        """Exclude bright stars from the background calculation
+    #     Parameters
+    #     ----------
+    #         obs (Observation)                   - Gammapy observation of events
+    #         rad (float)                         - radius of the exclusion region
+    #                                               default 0.35 deg
+    #         mag (float)                         - magnitude below which stars are excluded
+    #                                               default 8.0
+    #         run_mask (np.ndarray)               - boolean array of if an event is to be included
+    #                                               default None
 
-        Parameters
-        ----------
-            obs (Observation)                   - Gammapy observation of events
-            rad (float)                         - radius of the exclusion region
-                                                  default 0.35 deg
-            mag (float)                         - magnitude below which stars are excluded
-                                                  default 8.0
-            run_mask (np.ndarray)               - boolean array of if an event is to be included
-                                                  default None
+    #     Returns
+    #     ----------
+    #         run_mask (np.ndarray)               - boolean array of if an event is to be included
 
+    #     """
+    #     if run_mask is None:
+    #         run_mask = np.ones(len(obs.events.radec.ra), dtype=bool)
 
-        Returns
-        ----------
-            run_mask (np.ndarray)               - boolean array of if an event is to be included
+    #     # Look for stars above a mag cut and within the FoV
+    #     srcs_mask = (
+    #         np.sqrt(
+    #             (self.star_cat["ra"] - obs.pointing.radec.ra.deg) ** 2
+    #             + (self.star_cat["dec"] - obs.pointing.radec.dec.deg) ** 2
+    #         )
+    #         < 2.0
+    #     )
+    #     srcs_mask &= self.star_cat["mag"] < mag
 
-        """
-        if run_mask is None:
-            run_mask = np.ones(len(obs.events.radec.ra), dtype=bool)
+    #     for src in self.star_cat[srcs_mask]:
+    #         run_mask *= (
+    #             np.sqrt(
+    #                 (obs.events.radec.ra - src["ra"] * u.deg) ** 2
+    #                 + (obs.events.radec.dec - src["dec"] * u.deg) ** 2
+    #             )
+    #             > rad * u.deg
+    #         )
 
-        # Look for stars above a mag cut and within the FoV
-        srcs_mask = (
-            np.sqrt(
-                (self.star_cat["ra"] - obs.pointing.radec.ra.deg) ** 2
-                + (self.star_cat["dec"] - obs.pointing.radec.dec.deg) ** 2
-            )
-            < 2.0
-        )
-        srcs_mask &= self.star_cat["mag"] < mag
-
-        for src in self.star_cat[srcs_mask]:
-            run_mask *= (
-                np.sqrt(
-                    (obs.events.radec.ra - src["ra"] * u.deg) ** 2
-                    + (obs.events.radec.dec - src["dec"] * u.deg) ** 2
-                )
-                > rad * u.deg
-            )
-
-        return run_mask
+    #     return run_mask
 
     @property
     def background_rate(

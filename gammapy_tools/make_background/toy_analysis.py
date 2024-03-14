@@ -1,18 +1,20 @@
 import logging
-import os
 
 # %matplotlib inline
 import astropy.units as u
 import matplotlib.pyplot as plt
 import numpy as np
 from astropy.coordinates import SkyCoord
-from astropy.table import Table
 from gammapy.analysis import Analysis, AnalysisConfig
 from gammapy.datasets import MapDatasetOnOff
 from gammapy.estimators import ExcessMapEstimator
 from gammapy.makers import RingBackgroundMaker
 from regions import CircleSkyRegion
 from scipy.stats import norm
+
+
+# From here
+from ..utils import ExclusionFinder
 
 log = logging.getLogger(__name__)
 
@@ -83,43 +85,20 @@ def run_rbm(driver_file):
     geom_image = geom.to_image().to_cube([energy_axis.squash()])
 
     # Make the exclusion mask
-
-    this_dir, this_filename = os.path.split(__file__)
-    try:
-        star_path = os.path.join(this_dir, "Hipparcos_MAG8_1997.dat")
-        star_data = np.loadtxt(star_path, usecols=(0, 1, 2, 3), skiprows=62)
-    except Exception:
-        star_path = os.path.join(
-            os.environ.get("GAMMAPY_DATA"), "catalogs/", "Hipparcos_MAG8_1997.dat"
-        )
-        star_data = np.loadtxt(star_path, usecols=(0, 1, 2, 3), skiprows=62)
-
-    star_cat = Table(
-        {
-            "ra": star_data[:, 0],
-            "dec": star_data[:, 1],
-            "id": star_data[:, 2],
-            "mag": star_data[:, 3],
-        }
+    exclusions = ExclusionFinder()
+    excluded, source_name = exclusions.find_exclusion(
+        source_pos.ra.deg, source_pos.deg.deg
     )
-    mask = (
-        np.sqrt(
-            (star_cat["ra"] - source_pos.ra.deg) ** 2
-            + (star_cat["dec"] - source_pos.dec.deg) ** 2
-        )
-        < 2
-    )
-    mask &= star_cat["mag"] < 7
-    srcs_tab = star_cat[mask]
 
     regions = CircleSkyRegion(center=source_pos, radius=0.35 * u.deg)
     excluded_regions = [regions]
-    stars = []
-    for star in srcs_tab:
-        pos = SkyCoord(star["ra"], star["dec"], frame="fk5", unit=(u.deg, u.deg))
-        star = CircleSkyRegion(center=pos, radius=0.35 * u.deg)
-        stars.append(star)
-        excluded_regions.append(star)
+    for ex in excluded:
+        region = CircleSkyRegion(
+            # Defaults to ICRS
+            center=SkyCoord(ex[0], ex[1]),
+            radius=ex[2] * u.deg,
+        )
+        excluded_regions.append(region)
 
     exclusion_mask = ~geom_image.region_mask(excluded_regions)
     exclusion_mask.sum_over_axes().plot()
