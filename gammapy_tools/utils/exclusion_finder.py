@@ -1,5 +1,5 @@
 from os import path, environ
-from astropy.Table import Table
+from astropy.table import Table
 import numpy as np
 from gammapy.catalog import SourceCatalog3HWC, SourceCatalogGammaCat
 
@@ -12,11 +12,14 @@ class ExclusionFinder:
         this_dir, _ = path.split(__file__)
         try:
             star_path = path.join(this_dir, "Hipparcos_MAG8_1997.dat")
+            self.star_data = np.loadtxt(star_path, usecols=(0, 1, 2, 3), skiprows=62)
+
         except Exception:
             star_path = path.join(
                 environ.get("GAMMAPY_DATA"), "catalogs/", "Hipparcos_MAG8_1997.dat"
             )
-        self.star_data = np.loadtxt(star_path, usecols=(0, 1, 2, 3), skiprows=62)
+            self.star_data = np.loadtxt(star_path, usecols=(0, 1, 2, 3), skiprows=62)
+
         self.star_cat = Table(
             {
                 "ra": self.star_data[:, 0],
