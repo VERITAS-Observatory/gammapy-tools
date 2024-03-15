@@ -29,13 +29,27 @@ class ExclusionFinder:
             }
         )
 
-        # Assumes GAMMAPY_DATA is set
-        self.cat = SourceCatalogGammaCat(
-            "$GAMMAPY_DATA/catalogs/gammacat/gammacat.fits.gz"
-        )
-        self.hawc = SourceCatalog3HWC("$GAMMAPY_DATA/catalogs/3HWC.ecsv")
+        try:
+            # Assumes GAMMAPY_DATA is set
+            self.cat = SourceCatalogGammaCat(
+                "$GAMMAPY_DATA/catalogs/gammacat/gammacat.fits.gz"
+            )
+        except Exception as e:
+            print("Cannot find Gammacat")
+            print(e)
+            self.cat = None
+
+        try:
+            self.hawc = SourceCatalog3HWC("$GAMMAPY_DATA/catalogs/3HWC.ecsv")
+        except Exception as e:
+            print("Cannot find 3HWC")
+            print(e)
+            self.hawc = None
 
     def find_gamma_sources(self, ra: float, dec: float, theta: float) -> Table:
+        if self.cat is None:
+            return
+
         cat_mask = (
             (self.cat.table["ra"] - ra) ** 2 + (self.cat.table["dec"] - dec) ** 2
         ) < theta**2
@@ -45,6 +59,9 @@ class ExclusionFinder:
         ]
 
     def find_hawc_sources(self, ra: float, dec: float, theta: float) -> Table:
+        if self.hawc is None:
+            return
+
         hawc_mask = (
             (self.hawc.table["ra"] - ra) ** 2 + (self.hawc.table["dec"] - dec) ** 2
         ) < theta**2
@@ -82,18 +99,20 @@ class ExclusionFinder:
 
         # Find the HAWC sources
         hawc = self.find_hawc_sources(ra, dec, theta)
-        for source in hawc:
-            regions.append((source["ra"], source["dec"], theta_cut))
-            sources_excluded.append(source["source_name"])
+        if hawc is not None:
+            for source in hawc:
+                regions.append((source["ra"], source["dec"], theta_cut))
+                sources_excluded.append(source["source_name"])
 
         # Get the gammacat sources
         gamma = self.find_gamma_sources(ra, dec, theta)
-        for source in gamma:
-            theta_custom = theta_cut
-            if source["morph_type"] in ["gauss", "shell"]:
-                theta_custom = 3 * source["morph_sigma"]
-            regions.append((source["ra"], source["dec"], theta_custom))
-            sources_excluded.append(source["common_name"])
+        if gamma is not None:
+            for source in gamma:
+                theta_custom = theta_cut
+                if source["morph_type"] in ["gauss", "shell"]:
+                    theta_custom = 3 * source["morph_sigma"]
+                regions.append((source["ra"], source["dec"], theta_custom))
+                sources_excluded.append(source["common_name"])
 
         return regions, sources_excluded
 
