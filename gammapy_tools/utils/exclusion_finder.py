@@ -11,7 +11,7 @@ class ExclusionFinder:
         # ToDo wrap all this into package info
         this_dir, _ = path.split(__file__)
         try:
-            star_path = path.join(this_dir, "Hipparcos_MAG8_1997.dat")
+            star_path = path.join(this_dir, "../Hipparcos_MAG8_1997.dat")
             self.star_data = np.loadtxt(star_path, usecols=(0, 1, 2, 3), skiprows=62)
 
         except Exception:
