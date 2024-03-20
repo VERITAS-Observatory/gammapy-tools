@@ -1,0 +1,7 @@
+site_name: Gammapy-Tools
+
+theme:
+  name: "readthedocs"
+
+plugins:
+  - mkdocstrings
