@@ -7,8 +7,6 @@ from glob import glob
 from .fake_location import LocationFaker
 from ..make_background.background_tools import process_run
 from astropy.table import Table
-from astropy.coordinates import SkyCoord
-from astropy import units as U
 import yaml
 
 
@@ -119,7 +117,7 @@ def mimic_data(config: dict, randomise: bool = True) -> dict:
 
     # Run must have it's background so take data from out_dir
     input_dir = config["io"]["out_dir"]
-    in_data = DataStore.from_dir(search_dir)
+    in_data = DataStore.from_dir(input_dir)
 
     # Make the output dirs
     for i in range(n_mimic):
@@ -145,10 +143,16 @@ def mimic_data(config: dict, randomise: bool = True) -> dict:
         #     + "/"
         #     + data_store.hdu_table[of_interest]["FILE_NAME"][0]
         # )
-        f_target = input_dir + os.path.basename(
-            data_store.hdu_table[of_interest]["FILE_NAME"][0]
-        )
+        # f_target = input_dir + os.path.basename(
+        #     data_store.hdu_table[of_interest]["FILE_NAME"][0]
+        # )
 
+        # seems more stable, typo somewhere?
+        ftest = glob(input_dir + "/" + str(run) + "*.fits*")
+        fkl = glob(input_dir + "/" + str(run) + "*_kl.fits")
+        ftest = list(set(ftest) - set(fkl))
+
+        f_target = ftest[0]
         if not os.path.isfile(f_target):
             continue
 
@@ -202,17 +206,17 @@ def mimic_data(config: dict, randomise: bool = True) -> dict:
                 continue
 
             # source_location
-            target_location = SkyCoord(
-                mimic_runs["RA_OBJ"][indx[i]] * U.deg,
-                mimic_runs["DEC_OBJ"][indx[i]] * U.deg,
-            )
+            # target_location = SkyCoord(
+            #     mimic_runs["RA_OBJ"][indx[i]] * U.deg,
+            #     mimic_runs["DEC_OBJ"][indx[i]] * U.deg,
+            # )
 
             # Get the output name
             f_output = input_dir + f"/mimic_{i + 1}/" + os.path.basename(f_target)
 
             # todo add bright sources and stars
-            known_sources = [target_location]
-            # known_sources = []
+            # known_sources = [target_location]
+            known_sources = []
 
             faker.convert_fov(
                 f_target,
