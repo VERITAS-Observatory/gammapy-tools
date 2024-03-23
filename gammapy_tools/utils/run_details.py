@@ -69,7 +69,7 @@ def get_epoch(hdul: HDUList) -> tuple[Time, float, dict]:
     season = ""
 
     for key, value in epochs.items():
-        if (tobs.iso > value["tstart"]) & (tobs.iso <= value["tstop"]):
+        if (tobs.iso[:10] >= value["tstart"]) & (tobs.iso[:10] <= value["tstop"]):
             season = epochs[key]
     # to do: add error catching in case the time specified is outside of the VERITAS epochs
     return tobs, obs_id, season
