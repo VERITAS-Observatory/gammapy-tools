@@ -1,34 +1,35 @@
 io:
-    search_datastore : "/gamma_data/MegaStore/moderate2tel_runwise_backgrounds_nosmooth/"
-    in_dir : "/gamma_data/Crab_data/"
-    out_dir : "/gamma_data/Crab_data_runwise_backgrounds_nosmooth/"
-    results_dir : "/gamma_data/Crab_data_runwise_backgrounds_nosmooth/results/"
+    runlist: "/raid/romulus/swong/ED490/Eventdisplay_AnalysisScripts_VTS/scripts/crab_test.txt"
+    search_datastore : "/raid/romulus/dl3/ed/dl3_fullenclosure_moderate2tel/"
+    in_dir : "/raid/romulus/swong/mydl3/crabtest/"
+    out_dir : "/raid/romulus/swong/mydl3/crabtestbkgs/" 
+    results_dir: "/raid/romulus/swong/mydl3/crabtest/results/"
+
     # Whether or not to generate the background from the run
-    from_run : False  
+    from_run : false
     # Whether or not to analyze runs from a runlist or all runs in the results_dir
-    from_runlist: False
+    from_runlist: true
 
 binning:
     # Energy binning
     e_min: 0.1
     e_max: 100
-    e_bins: 20
+    e_bins: 10
     # Offset/wobble binning
     off_min: 0
     off_max: 2.5
     off_bins: 5
 
 config:
-    njobs : 10
+    njobs : 16
 
 exclusion:
     star_cat : "./Hipparcos_MAG8_1997.dat"
     # Exculde region around a simbad resolveable source name
     # Expecting name, exclusion
-    exclude_source_name : [ ("MGRO J1908+06", "0.5 deg"]
+    exclude_source_name : 
     # Exculde region around a given ra, dec
     exclude_regions :
-        - ["287.10", "6.39", "0.5"]
     # Exculde region around a given ra, dec
     # Exculde region around a given ra, dec
     # exclude_source_pos : [ ("287.10 deg", "6.39 deg", "0.5 deg"]
@@ -40,9 +41,9 @@ exclusion:
 background_selection:
     # el_min : 40
     # el_max : 30
-    nsb_diff : 0.7
+    nsb_diff : 1.5
     # 1/sin(el) difference
-    el_diff : 0.15
+    el_diff : 1.5
     # az difference
     az_diff : 45
     # Minimum number of telescopes
@@ -50,53 +51,61 @@ background_selection:
     # Maximum time between runs in days
     time_max : 180
     # Whether or not to smooth the background
-    smooth : False
-    # Runlist for creating backgroud
-    bkg_runlist : 
-        64080 : [65895, 63978, 64263, 65407, 65406, 62257, 64077, 63939, 66864, 64043, 63977, 66903, 63975, 62258, 64265, 62281, 63976, 64954, 64651, 67466, 64652, 64613, 64955, 65826, 64264]
-        64081 : [65895, 63978, 64263, 65407, 65406, 62257, 64077, 63939, 66864, 64043, 63977, 66903, 63975, 62258, 64265, 62281, 63976, 64954, 64651, 67466, 64652, 64613, 64955, 65826, 64264]
-        64082 : [65895, 63978, 64263, 65407, 65406, 62257, 64077, 63939, 66864, 64043, 63977, 66903, 63975, 62258, 64265, 62281, 63976, 64954, 64651, 67466, 64652, 64613, 64955, 65826, 64264]
-        64083 : [65895, 63978, 64263, 65407, 65406, 62257, 64077, 63939, 66864, 64043, 63977, 66903, 63975, 62258, 64265, 62281, 63976, 64954, 64651, 67466, 64652, 64613, 64955, 65826, 64264]
-
-analysis_selection:
-    theta2 : 0.008
+    smooth : true
+    smooth_sigma : 1
+    # Whether bkgs should come from same season as data
+    same_szn : true
+    time_request : 20
+    KL_DIV: true
 
 run_selection:
     # Runs of interests
-    runlist : [ 7, 64080, 64081, 64082, 64083]    # Source of interest
+    # Source of interest
     source_name : "Crab"
-    source_ra : 83.6333
-    source_dec : 22.0133
-    # Coords to search around
-    # coords : ["287.10 deg", "6.39 deg"]
-    # coords_galactic : ["40.39 deg", "-0.79 deg"]
+    pos_from_DL3: true
+    #source_ra: 253.4675000
+    #source_dec: 39.7602778
     # Maximum offset to select data from
-    offset_max : 1.5
+    offset_max : 3.5
     # Number of telescopes to select
-    n_tel : 4
+    n_tel : 3
     # elevation min/maz
-    el_min : 40
-    # el_max : 90
-    # Time range (d/m/y)
-    # time_min : "01/09/2007"
-    # time_max : "01/09/2025"
+    el_min : 30
+    
 spectrum : 
-    Emin : 0.2
-    Emax : 10
-    nbins : 10
+    e_min : 0.2
+    e_max : 30
+    e_bins : 8
     type : "PL"
-    params : [3.48e-11,2.4]
+    #array of [normalization, spectral index]
+    params : [3.45e-11,2.6]
+    
 lightcurve:
+    #light curve bin size in minutes
     bin_size_min: 1000
+    
 sky_map:
+    e_min: 0.1
+    e_max: 100
     map_deg: 2.5
+    bin_sz: 0.01
+    offset_max: 1.5
+    aeff_max_percent: 0.01
+    #exclusion regions are lists of lists of [[SkyCoord, radius], [SkyCoord, radius], ...]
     exclusion_regions: []
-    theta: 0.08944272
-    on_exclusion_region: 0.4
-    ring_rin: "0.6 deg"
-    ring_width: "0.2 deg"
-    truncate: True
-    aeff_max_percent: 0.1
+    #theta defines the ON region size
+    theta: 0.0894427191
+    #exclusion region around the source
+    on_exclusion_region: 0.35
+    #RBM parameters
+    ring_rin: "0.5333335 deg"
+    ring_width: "0.133333 deg"
+    #whether or not to truncate the skymap colourbar at +/- 5 sigma
+    truncate: true
+    #safe mask max aeff %
+    #dimmest visual magnitude for stars to be excluded
     min_star_brightness: 8
-results_file: 'canonical_crab_results.yaml'
-plot_names: 'canonical_crab'
+
+#where to save outputs    
+results_file: 'crab_test_results.yaml'
+plot_names: 'crab_test'

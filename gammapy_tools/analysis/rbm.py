@@ -5,6 +5,8 @@ from scipy.stats import norm
 from IPython.display import display
 import os
 from astropy.io import fits
+from os import environ
+from astropy.table import Table
 
 # %matplotlib inline
 import astropy.units as u
@@ -44,6 +46,8 @@ def rbm_analysis(config):
         excess_map: map of excess counts
         significance_map: significance map
     """
+    if not os.path.exists(config["io"]["results_dir"]):
+        os.makedirs(config["io"]["results_dir"])
 
     data_store = config["io"]["out_dir"]
 
@@ -88,8 +92,8 @@ def rbm_analysis(config):
     source_config.datasets.geom.selection.offset_max = map_deg * u.deg
 
     # We now fix the energy axis for the counts map - (the reconstructed energy binning)
-    source_config.datasets.geom.axes.energy.min = "0.1 TeV"
-    source_config.datasets.geom.axes.energy.max = "100 TeV"
+    source_config.datasets.geom.axes.energy.min = str(config["sky_map"]["e_min"])+" TeV"
+    source_config.datasets.geom.axes.energy.max = str(config["sky_map"]["e_max"])+" TeV"
     source_config.datasets.geom.axes.energy.nbins = 30
 
     source_config.excess_map.correlation_radius = str(config["sky_map"]["theta"]) +  " deg"
@@ -109,14 +113,14 @@ def rbm_analysis(config):
     analysis.get_observations()
     analysis.get_datasets()
 
-    simbad = Simbad()
-    simbad.reset_votable_fields()
-    simbad.add_votable_fields("ra", "dec", "flux(B)", "flux(V)", "jp11")
-    simbad.remove_votable_fields("coordinates")
+    #simbad = Simbad()
+    #simbad.reset_votable_fields()
+    #simbad.add_votable_fields("ra", "dec", "flux(B)", "flux(V)", "jp11")
+    #simbad.remove_votable_fields("coordinates")
 
-    srcs_tab = simbad.query_region(source_pos, radius=1.5 * u.deg)
-    srcs_tab = srcs_tab[srcs_tab["FLUX_B"] < config["sky_map"]["min_star_brightness"]]
-    srcs_tab = srcs_tab[srcs_tab["FLUX_V"] != np.ma.masked]
+    #srcs_tab = simbad.query_region(source_pos, radius=1.5 * u.deg)
+    #srcs_tab = srcs_tab[srcs_tab["FLUX_B"] < config["sky_map"]["min_star_brightness"]]
+    #srcs_tab = srcs_tab[srcs_tab["FLUX_V"] != np.ma.masked]
 
     # get the geom that we use
     geom = analysis.datasets[0].counts.geom
@@ -138,12 +142,39 @@ def rbm_analysis(config):
                     radius=radius * u.deg,
                 )
             )
-    stars = []
-    for star in srcs_tab:
-        pos = SkyCoord(star["RA"], star["DEC"], frame="fk5", unit=(u.hourangle, u.deg))
-        star = CircleSkyRegion(center=pos, radius=0.3 * u.deg)
-        stars.append(star)
-        all_ex.append(star)
+    
+    star_data = np.loadtxt(
+        # environ["GAMMAPY_DATA"] + "/catalogs/Hipparcos_MAG8_1997.dat", usecols=(0, 1, 2, 3, 4)
+        environ["GAMMAPY_DATA"] + "/catalogs/Hipparcos_MAG8_1997.dat",
+        usecols=(0, 1, 2, 3),
+    )
+    star_cat = Table(
+        {
+            "ra": star_data[:, 0],
+            "dec": star_data[:, 1],
+            "id": star_data[:, 2],
+            "mag": star_data[:, 3],
+            # "colour": star_data[:, 4],
+        }
+    )
+    star_mask = (
+        np.sqrt(
+            (star_cat["ra"] - source_pos.ra.deg) ** 2
+            + (star_cat["dec"] - source_pos.dec.deg) ** 2
+        )
+        < 2.0
+    )
+    # star_mask &= (star_cat["mag"] + star_cat["colour"]) < 8
+    star_mask &= (star_cat["mag"]) < 8
+
+    for src in star_cat[star_mask]:
+        all_ex.append(
+            CircleSkyRegion(
+                center=SkyCoord(src["ra"], src["dec"], unit="deg", frame="icrs"),
+                radius=0.3 * u.deg,
+            )
+        )
+
     exclusion_mask = ~geom_image.region_mask(all_ex)
     # exclusion_mask.sum_over_axes().plot()
 
@@ -332,13 +363,12 @@ def rbm_plots(
 
 
 def write_validation_info(
-    config, spectral_model, flux, counts, background, alpha, sigma, exposure
+    config, spectral_model, flux, flux_err,  counts, background, alpha, sigma, exposure
 ):
-    fluxtab = flux.to_table(sed_type="flux", format="lightcurve")
-    f200 = fluxtab["flux"].value[0][0]
-    f200_err = fluxtab["flux_err"].value[0][0]
-    ul = fluxtab["is_ul"].value[0][0]
 
+    if not os.path.exists(config["io"]["results_dir"]):
+        os.makedirs(config["io"]["results_dir"])
+        
     spectab = spectral_model.to_parameters_table()
     index = spectab["value"][0]
     index_err = spectab["error"][0]
@@ -354,9 +384,9 @@ def write_validation_info(
         "off": int(background),
         "alpha": f"{alpha:.3e}",
         "significance": f"{sigma:.2f}",
-        "flux": f"{f200:.2e}",
-        "flux_err": f"{f200_err:.2e}",
-        "flux_UL": bool(ul),
+        "flux": f"{flux:.2e}",
+        "flux_err": f"{flux_err:.2e}",
+        "flux_UL": "n/a",
         "norm": f"{norm:.2e}",
         "norm_err": f"{norm_err:.2e}",
         "index": f"{index:.2f}",
