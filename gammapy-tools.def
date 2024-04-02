@@ -6,7 +6,6 @@ Stage: build
 
     
 
-
 %files
     # Temporay build files
     ../gammapy-tools /gamma-tools/tmp_build/gammapy-tools
@@ -16,7 +15,7 @@ Stage: build
 %environment
     # Port for jupyter lab
     export JPORT=8000
-    export GAMMAPY_DATA=/gamma-tools/gammapy-datasets/1.1/
+    export GAMMAPY_DATA=/gamma-tools/gammapy-datasets/1.2/
     . "/opt/conda/etc/profile.d/conda.sh"
     . /opt/conda/bin/activate 
     export PATH=/opt/conda/bin/:$PATH
@@ -74,7 +73,7 @@ Stage: build
 
 %labels
     Author obriens
-    Version v0.0.1
+    Version v0.1.0
 
 %help
     This is a container with juptyer lab pre-installed with gammapy, v2dl3 and gammapy-background-analysis
