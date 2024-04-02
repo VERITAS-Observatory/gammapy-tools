@@ -153,8 +153,8 @@ class BackgroundModelEstimator:
         # todo: file io bottleneck?
         # run_mask = self.exclude_known_sources(obs)
         # run_mask = self.exclude_bright_stars(obs, run_mask=run_mask)
-        run_ra = obs.pointing.radec.ra.deg
-        run_dec = obs.pointing.radec.dec.deg
+        run_ra = obs.pointing.fixed_icrs.ra.deg
+        run_dec = obs.pointing.fixed_icrs.dec.deg
 
         # ToDo (obriens) add custom stellar mags and exclusion size
         run_mask = self.exclusion.exclude_events(events.table, run_ra, run_dec)
