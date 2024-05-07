@@ -24,7 +24,7 @@ Mastering Apptainer will help you create images with smaller footprints. At the 
 
 To create the docker image run:
 ```
-docker build -t local/gamma-tools:latest .
+docker build -t local/gammapy-tools:latest .
 ```
 
 Alternatively if you want to start a jupyter lab instance:
@@ -35,7 +35,7 @@ Will automatically build the image, launch it and start a jupyter lab on port 88
 
 To run an interactive shell:
 ```
-docker run --rm -it local/gamma-tools:latest bash
+docker run --rm -it local/gammapy-tools:latest bash
 ```
 
 
@@ -43,15 +43,15 @@ docker run --rm -it local/gamma-tools:latest bash
 
 To build the image using singularity/apptainer run:
 ```
-singularity/apptainer build gamma-tools.sif singularity.def
+singularity/apptainer build gammapy-tools.sif singularity.def
 ```
 
-Which creates the `gamma-tools.sif` image file, at the time of writing the file is ~700MB.
+Which creates the `gammapy-tools.sif` image file, at the time of writing the file is ~700MB.
 
 
 To launch a jupyter lab instance with this image run:
 ```
-singularity/apptainer run -B $(pwd):/local_data  gamma-tools.sif
+singularity/apptainer run -B $(pwd):/local_data  gammapy-tools.sif
 ```
 
 We can now open a jupyter lab instance in our browser at port 1234.
@@ -67,7 +67,7 @@ To simplify all of this, there are two scripts `singularity_hub.sh`:
 #!/bin/bash
 
 [[ "$1" ]] && DIR=$1  || DIR=$(pwd)
-singularity exec -B $DIR:/local_data gamma-tools.sif bash $(pwd)/launch_jupyter.sh
+singularity exec -B $DIR:/local_data gammapy-tools.sif bash $(pwd)/launch_jupyter.sh
 ```
 and `launch_jupyer.sh`:
 ```
@@ -83,11 +83,11 @@ Will start the singularity image, mounting `/path/to/my/data` to `/local_data`, 
 
 We can also run standalone scripts using the singularity image:
 ```
-singularity/apptainer run -B /path/to/my/data:/local_data  gamma-tools.sif python my_super_awesome_script.py
+singularity/apptainer run -B /path/to/my/data:/local_data  gammapy-tools.sif python my_super_awesome_script.py
 ```
 This will have access to data mounted in `/local_data` and run the python version within the container.
 
 Finally, you can start an interactive shell using:
 ```
-singularity/apptainer shell -B /path/to/my/data:/local_data gamma-tools.sif
+singularity/apptainer shell -B /path/to/my/data:/local_data gammapy-tools.sif
 ```

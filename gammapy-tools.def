@@ -6,7 +6,6 @@ Stage: build
 
     
 
-
 %files
     # Temporay build files
     ../gammapy-tools /gamma-tools/tmp_build/gammapy-tools
@@ -16,7 +15,7 @@ Stage: build
 %environment
     # Port for jupyter lab
     export JPORT=8000
-    export GAMMAPY_DATA=/gamma-tools/gammapy-datasets/1.1/
+    export GAMMAPY_DATA=/gamma-tools/gammapy-datasets/1.2/
     . "/opt/conda/etc/profile.d/conda.sh"
     . /opt/conda/bin/activate 
     export PATH=/opt/conda/bin/:$PATH
@@ -25,14 +24,14 @@ Stage: build
 
     apt update
     apt upgrade -y
-    apt install curl bash git gcc -y
+    apt install curl bash git gcc btop emacs -y
 
     # Install mamba and base env
     curl -L -O "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh"
     bash Miniforge3-$(uname)-$(uname -m).sh  -b -p /opt/conda
     . /opt/conda/bin/activate 
 
-    mamba install -c conda-forge iminuit cmasher astroquery numpy "astropy<6.0.0" pip matplotlib pip "jupyterlab==4.0.12"  notebook ipykernel ipython ipywidgets --yes 
+    mamba install -c conda-forge iminuit cmasher pip papermill matplotlib pip "jupyterlab==4.0.12"  notebook ipykernel ipython ipywidgets --yes 
     
     
     # Install v2dl3
@@ -74,7 +73,7 @@ Stage: build
 
 %labels
     Author obriens
-    Version v0.0.1
+    Version v0.1.0
 
 %help
     This is a container with juptyer lab pre-installed with gammapy, v2dl3 and gammapy-background-analysis

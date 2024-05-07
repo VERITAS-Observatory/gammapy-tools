@@ -67,13 +67,17 @@ def get_background_for_run(parms: tuple[float, dict]) -> tuple[str, list]:
         if obs not in config["background_selection"]["bkg_runlist"]:
 
             if config["background_selection"]["KL_DIV"]:
+                kl_file = None
+                if config["background_selection"]["store_KL"]:
+                    kl_file = config["io"]["out_dir"] + f"/{obs}_kl.fits"
+
                 kl_table = process_run(
                     obs,
                     config,
-                    output_name=None,
+                    output_name=kl_file,
                     search_runs=None,
                     bmimic=True,
-                    overwrite=False,
+                    overwrite=True,
                     njobs=config["config"]["njobs"],
                 )
 
