@@ -1,9 +1,9 @@
 io:
-    runlist: "/raid/romulus/swong/ED490/Eventdisplay_AnalysisScripts_VTS/scripts/crab_test.txt"
+    runlist: "/raid/romulus/swong/ED490/Eventdisplay_AnalysisScripts_VTS/scripts/mrk501_v4.txt"
     search_datastore : "/raid/romulus/dl3/ed/dl3_fullenclosure_moderate2tel/"
-    in_dir : "/raid/romulus/swong/mydl3/crabtest/"
-    out_dir : "/raid/romulus/swong/mydl3/crabtestbkgs/" 
-    results_dir: "/raid/romulus/swong/mydl3/crabtest/results/"
+    in_dir : "/raid/romulus/swong/mydl3/mrk501_v4/"
+    out_dir : "/raid/romulus/swong/mydl3/mrk501_v4_bkgs/"
+    results_dir: "/raid/romulus/swong/mydl3/mrk501_v4/results/"
 
     # Whether or not to generate the background from the run
     from_run : false
@@ -12,16 +12,16 @@ io:
 
 binning:
     # Energy binning
-    e_min: 0.1
-    e_max: 100
+    e_min: 0.25
+    e_max: 30
     e_bins: 10
     # Offset/wobble binning
     off_min: 0
-    off_max: 2.5
+    off_max: 2
     off_bins: 5
 
 config:
-    njobs : 16
+    njobs : 3
 
 exclusion:
     star_cat : "./Hipparcos_MAG8_1997.dat"
@@ -55,57 +55,56 @@ background_selection:
     smooth_sigma : 1
     # Whether bkgs should come from same season as data
     same_szn : true
-    time_request : 20
+    #time_request : 20
     KL_DIV: true
+    #max_runs : true
+    #n_runs : 50
+
 
 run_selection:
     # Runs of interests
     # Source of interest
-    source_name : "Crab"
+    source_name : "Mrk 501"
     pos_from_DL3: true
-    #source_ra: 253.4675000
-    #source_dec: 39.7602778
     # Maximum offset to select data from
     offset_max : 3.5
     # Number of telescopes to select
-    n_tel : 3
+    n_tel : 4
     # elevation min/maz
     el_min : 30
     
 spectrum : 
-    e_min : 0.2
+    e_min : 0.25
     e_max : 30
-    e_bins : 8
+    e_bins : 10
     type : "PL"
     #array of [normalization, spectral index]
-    params : [3.45e-11,2.6]
+    params : [1e-15,2.72]
     
 lightcurve:
     #light curve bin size in minutes
     bin_size_min: 1000
     
 sky_map:
-    e_min: 0.1
-    e_max: 100
     map_deg: 2.5
     bin_sz: 0.01
     offset_max: 1.5
-    aeff_max_percent: 0.01
     #exclusion regions are lists of lists of [[SkyCoord, radius], [SkyCoord, radius], ...]
     exclusion_regions: []
     #theta defines the ON region size
-    theta: 0.0894427191
+    theta: 0.089
     #exclusion region around the source
     on_exclusion_region: 0.35
     #RBM parameters
-    ring_rin: "0.5333335 deg"
-    ring_width: "0.133333 deg"
+    ring_rin: "0.6 deg"
+    ring_width: "0.1 deg"
     #whether or not to truncate the skymap colourbar at +/- 5 sigma
     truncate: true
     #safe mask max aeff %
+    aeff_max_percent: 0.1
     #dimmest visual magnitude for stars to be excluded
     min_star_brightness: 8
 
 #where to save outputs    
-results_file: 'crab_test_results.yaml'
-plot_names: 'crab_test'
+results_file: 'segue_ps_results.yaml'
+plot_names: 'segue_ps'

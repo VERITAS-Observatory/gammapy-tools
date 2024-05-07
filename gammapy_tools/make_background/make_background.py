@@ -4,7 +4,8 @@ from multiprocessing import Pool
 
 import numpy as np
 import yaml
-
+from os import listdir
+from os.path import isfile, join, getsize
 # Astropy
 from astropy.io import fits
 from gammapy.data import DataStore
@@ -417,6 +418,11 @@ def run_make_background(config: dict) -> dict:
 
     return config
 
+def write_index_files(config):
+    dl3_dir = config["io"]["out_dir"]
+    dl3Files = [dl3_dir + f for f in listdir(dl3_dir) if isfile(join(dl3_dir, f)) and (f.endswith(".fits") or (f.endswith(".fits.gz") and not f.startswith("obs") and not f.startswith("hdu"))) and (f.strip('.anasum.fits') )]
+    create_obs_hdu_index_file(dl3Files,index_file_dir=dl3_dir)
+    return
 
 if __name__ == "__main__":
     with open(sys.argv[1], "r") as f:
