@@ -36,7 +36,6 @@ exclusion:
     # Expecting ra, dec, exclusion
     # exclude_source_run : [ "287.10 deg", "6.39 deg", "3.5 deg"]
 
-
 background_selection:
     # el_min : 40
     # el_max : 30
@@ -49,10 +48,30 @@ background_selection:
     n_tels : 4
     # Maximum time between runs in days
     time_max : 180
+    # Requested number of hours for producing a background
+    time_request : 10
     # Whether or not to smooth the background
     smooth : False
     # Sigma of the gaussian smoothing kernel
-    smooth_sigma : 0.1
+    smooth_sigma : 1.0
+    # If we should use the KL divergence to find the background runs
+    KL_DIV : True
+    store_KL : True
+    bright_sources :
+        - "Crab"
+        - "Mrk421"
+        - "Mrk501"
+        - "1ES1215+303"
+        - "1ES1218+304"
+        - "RGBJ0710+591"
+        - "1ES1440+122"
+        - "PG1553+113"
+        - "IC443"
+        - "Boomerang"
+        - "3C66A"
+        - "W Comae"
+        - "M87"
+        - "OJ 287"
 
 
 run_selection:

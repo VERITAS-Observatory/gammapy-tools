@@ -6,19 +6,18 @@ import yaml
 from gammapy.data import DataStore
 
 
-def prepare_dataset(config):
+def prepare_dataset(config: dict) -> dict:
     """Prepare a dataset for analysis. Extract runs of interest from an existing datastore,
     reporting any missing runs.
 
     Parameters
     ----------
-    config : dict
-        dictionary with config information
+        config (dict)                              - dictionary with config information
 
     Returns
     ----------
-    config : dict
-        dictionary with config information (missing runs reported)
+        config (dict)                              - dictionary with config information
+                                                    (missing runs reported)
 
     """
     # Check if we have a list of runs of a file name

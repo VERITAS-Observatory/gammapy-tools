@@ -8,7 +8,9 @@ packages=[
     "gammapy_tools.make_background", 
     "gammapy_tools.fake_source_coordinates", 
     "gammapy_tools.templates",
-    "gammapy_tools.analysis"]
+    "gammapy_tools.analysis",
+    "gammapy_tools.utils",
+    ]
 
 [tool.setuptools_scm]
 write_to = "gammapy_tools/_version.py"
@@ -21,18 +23,32 @@ readme = "README.md"
 license = { file="LICENSE" }
 
 requires-python = ">=3.9"
+#dependencies = [
+#    "gammapy==1.2",
+#    "pydantic<=1.10",
+#    "scipy==1.11.4",
+#    "astropy==5.3.4",
+#    "astroquery==0.4.6",
+#    "matplotlib==3.8.2",
+#    "multiprocess==0.70.16",
+#    "numpy==1.26.4",
+#    #"pyV2DL3==0.5",
+#    "PyYAML==6.0.1",
+#    "regions==0.8",
+#]
+
 dependencies = [
-    "pyyaml",
-    "numpy",
-    "astropy<6.0.0",
-    "pymysql",
-    "pandas",
-    "tqdm",
+    "gammapy>=1.1",
+    "pydantic",
+    "scipy==1.11.4",
+    "astropy",
+    "astroquery",
     "matplotlib",
     "multiprocess",
-    "gammapy==1.1",
-    "pydantic<=1.10",
-    "scipy==1.11.4",
+    "numpy",
+    #"pyV2DL3",
+    "PyYAML",
+    "regions",
 ]
 
 [project.optional-dependencies]

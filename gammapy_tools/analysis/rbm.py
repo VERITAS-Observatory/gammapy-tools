@@ -2,6 +2,11 @@ import logging
 import yaml
 import numpy as np
 from scipy.stats import norm
+from IPython.display import display
+import os
+from astropy.io import fits
+from os import environ
+from astropy.table import Table
 
 # %matplotlib inline
 import astropy.units as u
@@ -14,6 +19,7 @@ from gammapy.analysis import Analysis, AnalysisConfig
 from gammapy.datasets import MapDatasetOnOff
 from gammapy.estimators import ExcessMapEstimator
 from gammapy.makers import RingBackgroundMaker
+from gammapy.data import DataStore
 
 from gammapy.modeling.models import PowerLawSpectralModel
 
@@ -39,16 +45,9 @@ def rbm_analysis(config):
         sigma: significance at the source location (defined in the config file)
         excess_map: map of excess counts
         significance_map: significance map
-        significance_map_off: background significance map
     """
-
-    # get position from ra/dec [deg]
-    source_pos = SkyCoord(
-        config["run_selection"]["source_ra"],
-        config["run_selection"]["source_dec"],
-        frame="icrs",
-        unit="deg",
-    )
+    if not os.path.exists(config["io"]["results_dir"]):
+        os.makedirs(config["io"]["results_dir"])
 
     data_store = config["io"]["out_dir"]
 
@@ -56,6 +55,24 @@ def rbm_analysis(config):
     source_config = AnalysisConfig()
     source_config.datasets.type = "3d"
     source_config.observations.datastore = data_store
+    
+    #select only observations from runlist, if specified
+    if config["io"]["from_runlist"]:
+        source_config.observations.obs_ids = np.genfromtxt(config["io"]["runlist"],unpack=True).tolist()
+    
+    if config["run_selection"]["pos_from_DL3"]:
+        #get RA and DEC from first run
+        hdul = fits.open(config["io"]["out_dir"]+os.listdir(config["io"]["out_dir"])[0])
+        source_pos = SkyCoord(hdul[1].header["RA_OBJ"]*u.deg, hdul[1].header["DEC_OBJ"]*u.deg)
+    
+    else:
+        source_pos = SkyCoord(
+            config["run_selection"]["source_ra"],
+            config["run_selection"]["source_dec"],
+            frame="icrs",
+            unit="deg",
+        )
+    
     source_config.datasets.geom.wcs.skydir = {
         "lon": source_pos.ra,
         "lat": source_pos.dec,
@@ -68,26 +85,24 @@ def rbm_analysis(config):
         "width": f"{map_deg} deg",
         "height": f"{map_deg} deg",
     }
-    source_config.datasets.geom.wcs.binsize = config["sky_map"]["bin_size"]
+    source_config.datasets.geom.wcs.binsize = config["sky_map"]["bin_sz"] * u.deg
     source_config.datasets.map_selection = ["counts", "exposure", "background", "edisp"]
 
     # Cutout size (for the run-wise event selection)
     source_config.datasets.geom.selection.offset_max = map_deg * u.deg
 
     # We now fix the energy axis for the counts map - (the reconstructed energy binning)
-    source_config.datasets.geom.axes.energy.min = "0.1 TeV"
-    source_config.datasets.geom.axes.energy.max = "100 TeV"
+    source_config.datasets.geom.axes.energy.min = str(config["sky_map"]["e_min"])+" TeV"
+    source_config.datasets.geom.axes.energy.max = str(config["sky_map"]["e_max"])+" TeV"
     source_config.datasets.geom.axes.energy.nbins = 30
 
-    source_config.excess_map.correlation_radius = f"{np.sqrt(0.008)} deg"
-
+    source_config.excess_map.correlation_radius = str(config["sky_map"]["theta"]) +  " deg"
+    
     # We need to extract the ring for each observation separately, hence, no stacking at this stage
     source_config.datasets.stack = False
 
-    source_config.datasets.safe_mask.methods = ["aeff-max"]
-    source_config.datasets.safe_mask.parameters = {
-        "aeff_percent": config["sky_map"]["aeff_max_percent"]
-    }
+    source_config.datasets.safe_mask.parameters = {'aeff_percent':config["sky_map"]["aeff_max_percent"], 'offset_max':config["sky_map"]["offset_max"]*u.deg}
+    source_config.datasets.safe_mask.methods = ['aeff-max','offset-max']
 
     analysis = Analysis(source_config)
 
@@ -98,14 +113,14 @@ def rbm_analysis(config):
     analysis.get_observations()
     analysis.get_datasets()
 
-    simbad = Simbad()
-    simbad.reset_votable_fields()
-    simbad.add_votable_fields("ra", "dec", "flux(B)", "flux(V)", "jp11")
-    simbad.remove_votable_fields("coordinates")
+    #simbad = Simbad()
+    #simbad.reset_votable_fields()
+    #simbad.add_votable_fields("ra", "dec", "flux(B)", "flux(V)", "jp11")
+    #simbad.remove_votable_fields("coordinates")
 
-    srcs_tab = simbad.query_region(source_pos, radius=1.5 * u.deg)
-    srcs_tab = srcs_tab[srcs_tab["FLUX_B"] < config["sky_map"]["min_star_brightness"]]
-    srcs_tab = srcs_tab[srcs_tab["FLUX_V"] != np.ma.masked]
+    #srcs_tab = simbad.query_region(source_pos, radius=1.5 * u.deg)
+    #srcs_tab = srcs_tab[srcs_tab["FLUX_B"] < config["sky_map"]["min_star_brightness"]]
+    #srcs_tab = srcs_tab[srcs_tab["FLUX_V"] != np.ma.masked]
 
     # get the geom that we use
     geom = analysis.datasets[0].counts.geom
@@ -127,12 +142,39 @@ def rbm_analysis(config):
                     radius=radius * u.deg,
                 )
             )
-    stars = []
-    for star in srcs_tab:
-        pos = SkyCoord(star["RA"], star["DEC"], frame="fk5", unit=(u.hourangle, u.deg))
-        star = CircleSkyRegion(center=pos, radius=0.3 * u.deg)
-        stars.append(star)
-        all_ex.append(star)
+    
+    star_data = np.loadtxt(
+        # environ["GAMMAPY_DATA"] + "/catalogs/Hipparcos_MAG8_1997.dat", usecols=(0, 1, 2, 3, 4)
+        environ["GAMMAPY_DATA"] + "/catalogs/Hipparcos_MAG8_1997.dat",
+        usecols=(0, 1, 2, 3),
+    )
+    star_cat = Table(
+        {
+            "ra": star_data[:, 0],
+            "dec": star_data[:, 1],
+            "id": star_data[:, 2],
+            "mag": star_data[:, 3],
+            # "colour": star_data[:, 4],
+        }
+    )
+    star_mask = (
+        np.sqrt(
+            (star_cat["ra"] - source_pos.ra.deg) ** 2
+            + (star_cat["dec"] - source_pos.dec.deg) ** 2
+        )
+        < 2.0
+    )
+    # star_mask &= (star_cat["mag"] + star_cat["colour"]) < 8
+    star_mask &= (star_cat["mag"]) < 8
+
+    for src in star_cat[star_mask]:
+        all_ex.append(
+            CircleSkyRegion(
+                center=SkyCoord(src["ra"], src["dec"], unit="deg", frame="icrs"),
+                radius=0.3 * u.deg,
+            )
+        )
+
     exclusion_mask = ~geom_image.region_mask(all_ex)
     # exclusion_mask.sum_over_axes().plot()
 
@@ -184,8 +226,8 @@ def rbm_analysis(config):
     sigma = output_dict["sqrt_ts"]
     exposure = output_dict["ontime"]
 
-    # significance_map_off = significance_map * exclusion_mask
-    # significance_map_off = significance_map[exclusion_mask]
+    #significance_map_off = significance_map * exclusion_mask
+    #significance_map_off = significance_map[exclusion_mask]
 
     return (
         counts,
@@ -205,10 +247,11 @@ def rbm_plots(
     spectral_points,
     excess_map,
     significance_map,
-    exclusion_mask,
     c_sig,
     c_time,
+    exclusion_mask,
     save=True,
+    plot=True,
 ):
     """
     Makes + optionally saves significance/excess maps,
@@ -242,12 +285,12 @@ def rbm_plots(
         config["plot_names"] + "sig_excess.png", format="png", bbox_inches="tight"
     )
     plt.show()
+    
+    significance_map_off = significance_map * exclusion_mask
 
     # significance distribution
     significance_all = significance_map.data[np.isfinite(significance_map.data)]
-    significance_off = significance_map.data[
-        np.isfinite(significance_map.data) & exclusion_mask
-    ]
+    significance_off = significance_map_off.data[np.isfinite(significance_map_off.data)]
 
     fig, ax = plt.subplots()
     ax.hist(
@@ -256,16 +299,16 @@ def rbm_plots(
         alpha=0.5,
         color="red",
         label="all bins",
-        bins=np.linspace(-5, 10, 100),
+        bins=np.linspace(-5,10,50),
     )
 
     ax.hist(
-        significance_off,
+        significance_off[exclusion_mask.data.flatten()],
         density=True,
         alpha=0.5,
         color="blue",
         label="off bins",
-        bins=np.linspace(-5, 10, 100),
+        bins=np.linspace(-5,10,50),
     )
 
     # Now, fit the off distribution with a Gaussian
@@ -287,8 +330,10 @@ def rbm_plots(
         format="png",
         bbox_inches="tight",
     )
-    plt.show()
-
+    if plot:
+        plt.show()
+    else:
+        plt.clf()
     # cumulative significance
     plt.plot(c_time, c_sig, "ko")
     plt.xlabel("Time [h]")
@@ -299,7 +344,10 @@ def rbm_plots(
         format="png",
         bbox_inches="tight",
     )
-    plt.show()
+    if plot:
+        plt.show()
+    else:
+        plt.clf()
 
     # spectral points
     spectral_points.plot(sed_type="dnde")
@@ -308,18 +356,19 @@ def rbm_plots(
         format="png",
         bbox_inches="tight",
     )
+    if plot:
+        plt.show()
 
     return
 
 
 def write_validation_info(
-    config, spectral_model, flux, counts, background, alpha, sigma, exposure
+    config, spectral_model, flux, flux_err,  counts, background, alpha, sigma, exposure
 ):
-    fluxtab = flux.to_table(sed_type="flux", format="lightcurve")
-    f200 = fluxtab["flux"].value[0][0]
-    f200_err = fluxtab["flux_err"].value[0][0]
-    ul = fluxtab["is_ul"].value[0][0]
 
+    if not os.path.exists(config["io"]["results_dir"]):
+        os.makedirs(config["io"]["results_dir"])
+        
     spectab = spectral_model.to_parameters_table()
     index = spectab["value"][0]
     index_err = spectab["error"][0]
@@ -327,6 +376,7 @@ def write_validation_info(
     norm_err = spectab["error"][1]
 
     output_dict = {
+        "analysis notebook version": 1.0,
         "source": config["run_selection"]["source_name"],
         "gammapy version": gammapy.__version__,
         "exposure": float(exposure.value) / 60,
@@ -334,9 +384,9 @@ def write_validation_info(
         "off": int(background),
         "alpha": f"{alpha:.3e}",
         "significance": f"{sigma:.2f}",
-        "flux": f"{f200:.2e}",
-        "flux_err": f"{f200_err:.2e}",
-        "flux_UL": bool(ul),
+        "flux": f"{flux:.2e}",
+        "flux_err": f"{flux_err:.2e}",
+        "flux_UL": "n/a",
         "norm": f"{norm:.2e}",
         "norm_err": f"{norm_err:.2e}",
         "index": f"{index:.2f}",

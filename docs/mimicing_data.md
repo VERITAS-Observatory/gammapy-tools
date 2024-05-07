@@ -87,3 +87,24 @@ Example sky maps of unscrambled data:
 Example sky maps of scrambled data:
 ![Crab Skymap](./images/mimic/FakeCrabMaps.png)
 ![Crab Skymap](./images/mimic/FakeCrabRBM.png)
+
+## Mimicing when generating backgrounds
+
+`gammapy_tools.fake_source_coordinates.process.mimic_data` can be used to mimic an entire dataset. This can be ran as:
+```
+from gammapy_tools.make_background import run_make_background, prepare_dataset
+from gammapy_tools.templates import get_config
+
+# Getting a dummy config, you can load in your own
+config = get_config()
+
+config["background_selection"]["KL_DIV"] =  True
+config["background_selection]["store_KL"] =  True
+
+config = run_make_background(config)
+config = mimic_data(config)
+```
+
+Notice that `KL_DIV` and `store_KL` are set to `True` and that `mimic_data` is called after `run_make_background`. With `KL_DIV = True`, `run_make_background` will calculate the KL divergence for all runs passing the mimic criteria defined in the config file. With `KL_DIV = True`, the a table for each run will be saved to `config["io"]["out_dir"]/run_number.kl.fits` (O(50kb)). This file is reread in during `mimic_data`. If the file doesn't exist, the KL divergence will be recalculated. Calculating and saving at the `run_make_background` reduces the computational requirements.
+
+`mimic_data` will produce 5 mimic datasets at `config["io"]["out_dir"]/mimic_i`, where `i` is the dataset index. Runs for which either no mimic datasets are found or have high KL divergence values are reported in `config["background_selection"]["questionable"]`. This is stored as a list of tuples with the first entry in the tuple being the run number and the second being the reason. For example `(12345, "no_mimic")` suggests no mimic runs where found for run `12345` and `(67890, "large_kl")` suggests that all the potential mimic runs for 67890 have a large KL divergence value (currently set to > 1). 
