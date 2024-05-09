@@ -141,7 +141,10 @@ def find_data_mimic(
 
     # mask in time
     if config["background_selection"]["same_szn"]:
-        sub_table = obs_table[(obs_date > list(season.values())[0]) & (obs_date < list(season.values())[1])]
+        sub_table = obs_table[
+            (obs_date > list(season.values())[0])
+            & (obs_date < list(season.values())[1])
+        ]
     else:
         sub_table = obs_table[np.abs(obs_date - tobs) < time_max]
 
