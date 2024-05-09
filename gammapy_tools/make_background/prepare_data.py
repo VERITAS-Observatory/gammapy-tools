@@ -6,14 +6,15 @@ import yaml
 from gammapy.data import DataStore
 
 
-def prepare_dataset(config: dict) -> dict:
+def prepare_dataset(config: dict, overwrite: bool = False) -> dict:
     """Prepare a dataset for analysis. Extract runs of interest from an existing datastore,
     reporting any missing runs.
 
     Parameters
     ----------
         config (dict)                              - dictionary with config information
-
+        overwrite (bool)                           - bool to control whether or not to overwrite
+                                                     the output directory
     Returns
     ----------
         config (dict)                              - dictionary with config information
@@ -51,7 +52,7 @@ def prepare_dataset(config: dict) -> dict:
 
     # Copy
     try:
-        data_store.copy_obs(obs_in_db, in_dir)
+        data_store.copy_obs(obs_in_db, in_dir, overwrite=overwrite)
     except Exception as e:
         if len(obs_in_db) == 0:
             raise RuntimeError(
