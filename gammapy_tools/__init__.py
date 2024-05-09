@@ -2,7 +2,7 @@ from . import analysis
 from . import make_background
 from . import templates
 from . import fake_source_coordinates
-from ._version import __version__
+from .__version__ import __version__
 __all__ = (
     analysis.__all__
     + make_background.__all__
