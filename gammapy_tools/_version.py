@@ -3,6 +3,7 @@
 TYPE_CHECKING = False
 if TYPE_CHECKING:
     from typing import Tuple, Union
+
     VERSION_TUPLE = Tuple[Union[int, str], ...]
 else:
     VERSION_TUPLE = object
