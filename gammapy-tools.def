@@ -16,22 +16,27 @@ Stage: build
     # Port for jupyter lab
     export JPORT=8000
     export GAMMAPY_DATA=/gamma-tools/gammapy-datasets/1.2/
-    . "/opt/conda/etc/profile.d/conda.sh"
-    . /opt/conda/bin/activate 
-    export PATH=/opt/conda/bin/:$PATH
-    
+    #. "/opt/conda/etc/profile.d/conda.sh"
+    #. /opt/conda/bin/activate 
+    #export PATH=/opt/conda/bin/:$PATH
+    . /opt/gammapy_tools/bin/activate
+
+
 %post
 
     apt update
     apt upgrade -y
-    apt install curl bash git gcc btop emacs -y
+    apt install curl bash git gcc btop emacs python3 python3-pip python3.12-venv -y
 
     # Install mamba and base env
-    curl -L -O "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh"
-    bash Miniforge3-$(uname)-$(uname -m).sh  -b -p /opt/conda
-    . /opt/conda/bin/activate 
+    #curl -L -O "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh"
+    #bash Miniforge3-$(uname)-$(uname -m).sh  -b -p /opt/conda
+    #. /opt/conda/bin/activate 
 
-    mamba install -c conda-forge iminuit cmasher pip papermill matplotlib pip "jupyterlab==4.0.12"  notebook ipykernel ipython ipywidgets --yes 
+    python3 -m venv /opt/gammapy_tools
+    . /opt/gammapy_tools/bin/activate
+    pip install iminuit cmasher pip papermill matplotlib pip "jupyterlab==4.0.12"  notebook ipykernel ipython ipywidgets
+    #mamba install -c conda-forge iminuit cmasher pip papermill matplotlib pip "jupyterlab==4.0.12"  notebook ipykernel ipython ipywidgets --yes 
     
     
     # Install v2dl3
@@ -41,7 +46,7 @@ Stage: build
 
     # Because its an env install of requirements
     # Note the python version in the latest test throws issues with pytest
-    grep -A 100 "dependencies:" environment-eventdisplay.yml | grep "-" | grep -v "python" | awk '{print $2}' | xargs mamba install --yes
+    grep -A 100 "dependencies:" environment-eventdisplay.yml | grep "-" | grep -v "python" | awk '{print $2}' | xargs pip install
 
     # root_numpy throws issues too. Only VEGAS uses it
     mv setup.py _setup.py && grep -v "root_numpy" _setup.py > setup.py && pip install .
@@ -59,7 +64,7 @@ Stage: build
 
     cd /gamma-tools ; rm -r /gamma-tools/tmp_build
 
-    mamba clean -a --yes   
+    #mamba clean -a --yes   
     python -m pip cache purge
 
 

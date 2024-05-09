@@ -1,7 +1,7 @@
 FROM jupyter/minimal-notebook AS base
 
 # Install gammapy
-RUN mamba install gcc jupyterlab --yes
+RUN mamba install gcc jupyterlab "gammapy==1.2" --yes
 WORKDIR /gammapy-tools
 
 
@@ -28,12 +28,15 @@ COPY --from=base /opt/conda /opt/conda
 WORKDIR /gammapy-tools/tmp_build
 
 # RUN gammapy download datasets
-ENV GAMMAPY_DATA=/gammapy-tools/gammapy-datasets/1.1/
+ENV GAMMAPY_DATA=/gammapy-tools/gammapy-datasets/1.2/
 RUN mkdir -p $GAMMAPY_DATA
+WORKDIR /gammapy-tools/
+RUN gammapy download datasets
 
 # Add package
 ADD --chown=1000:100 . /gammapy-tools/tmp_build/gammapy-tools
 WORKDIR /gammapy-tools/tmp_build/gammapy-tools
+
 
 
 # RUN ls -lah
