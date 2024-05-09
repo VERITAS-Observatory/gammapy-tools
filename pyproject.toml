@@ -60,6 +60,6 @@ version_provider = "scm"
 update_changelog_on_bump = true
 changelog_incremental = true
 version_files = [
-    "__version__.py",
+    "gammapy_tools/__version__.py",
     "pyproject.toml:version"
 ]
