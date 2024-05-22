@@ -309,50 +309,44 @@ def rbm_plots(
     )
     plt.show()
     
+    # create a 2D mask for the images
     significance_map_off = significance_map * exclusion_mask
-
-    # significance distribution
-    significance_all = significance_map.data[np.isfinite(significance_map.data)]
-    significance_off = significance_map_off.data[np.isfinite(significance_map_off.data)]
+    significance_all = significance_map.data.flatten()
+    significance_off = significance_map_off.data.flatten()[exclusion_mask.data.flatten()]
 
     fig, ax = plt.subplots()
     ax.hist(
-        significance_all,
+        significance_all[np.isfinite(significance_all)],
         density=True,
         alpha=0.5,
         color="red",
         label="all bins",
-        bins=np.linspace(-5,10,50),
+        bins=np.linspace(-5,10,100),
     )
 
     ax.hist(
-        significance_off[exclusion_mask.data.flatten()],
+        significance_off[np.isfinite(significance_off)],
         density=True,
         alpha=0.5,
         color="blue",
         label="off bins",
-        bins=np.linspace(-5,10,50),
+        bins=np.linspace(-5,10,100),
     )
 
     # Now, fit the off distribution with a Gaussian
-    mu, std = norm.fit(significance_off[exclusion_mask.data.flatten()])
-    x = np.linspace(-5, 10, 50)
+    mu, std = norm.fit(significance_off[np.isfinite(significance_off)])
+    x = np.linspace(-10, 10, 100)
     p = norm.pdf(x, mu, std)
     ax.plot(x, p, lw=2, color="black")
     ax.legend()
     ax.set_xlabel("Significance")
     ax.set_yscale("log")
     ax.set_ylim(1e-5, 1)
-    # xmin, xmax = np.min(significance_all), np.max(significance_all)
+    xmin, xmax = np.min(significance_all), np.max(significance_all)
     ax.set_xlim(-5, 10)
 
     print(f"Fit results: mu = {mu:.2f}, std = {std:.2f}")
     ax.text(-4.5, 0.5, f"Fit results: mu = {mu:.2f}, std = {std:.2f}")
-    plt.savefig(
-        config["io"]["results_dir"] + config["plot_names"] + "sig_dist.png",
-        format="png",
-        bbox_inches="tight",
-    )
     if plot:
         plt.show()
     else:
@@ -399,8 +393,8 @@ def write_validation_info(
     norm_err = spectab["error"][1]
 
     output_dict = {
-        "analysis notebook version": 0.2
-        "gammapy-tools version": 1.0.0,
+        "analysis notebook version": 0.2,
+        "gammapy-tools version": "1.0.0",
         "source": config["run_selection"]["source_name"],
         "gammapy version": gammapy.__version__,
         "exposure (min)": float(exposure.value) / 60,
