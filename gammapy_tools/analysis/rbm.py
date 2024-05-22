@@ -7,6 +7,7 @@ import os
 from astropy.io import fits
 from os import environ
 from astropy.table import Table
+from scipy.optimize import fsolve
 
 # %matplotlib inline
 import astropy.units as u
@@ -18,7 +19,7 @@ import gammapy
 from gammapy.analysis import Analysis, AnalysisConfig
 from gammapy.datasets import MapDatasetOnOff
 from gammapy.estimators import ExcessMapEstimator
-from gammapy.makers import RingBackgroundMaker
+from gammapy.makers import RingBackgroundMaker,SafeMaskMaker
 from gammapy.data import DataStore
 
 from gammapy.modeling.models import PowerLawSpectralModel
@@ -27,6 +28,32 @@ from astroquery.simbad import Simbad
 
 log = logging.getLogger(__name__)
 
+def estimate_alpha(S,N_on,N_off):
+    """
+    Numerically estimates alpha from significance, ON counts, and OFF counts
+
+    Parameters
+    ----------
+        S: significance
+        N_on: on counts
+        N_off: off counts*alpha
+
+    Returns
+    ----------
+        alpha: estimated alpha
+    """
+
+    # Define the function to find the root of
+    def equation(alpha):
+        return np.sqrt(2) * np.sqrt(N_on * np.log((1 + alpha) / alpha * (N_on / (N_on + (N_off/alpha)))) + 
+                             (N_off/alpha) * np.log((1 + alpha) * ((N_off/alpha) / (N_on + (N_off/alpha))))) - S
+    
+    # Initial guess for alpha
+    alpha_initial_guess = 1e-2
+    
+    # Solve for alpha
+    alpha_solution = fsolve(equation, alpha_initial_guess)
+    return alpha_solution[0]
 
 def rbm_analysis(config):
     """
@@ -55,7 +82,6 @@ def rbm_analysis(config):
     source_config = AnalysisConfig()
     source_config.datasets.type = "3d"
     source_config.observations.datastore = data_store
-    
     #select only observations from runlist, if specified
     if config["io"]["from_runlist"]:
         source_config.observations.obs_ids = np.genfromtxt(config["io"]["runlist"],unpack=True).tolist()
@@ -194,36 +220,34 @@ def rbm_analysis(config):
         dataset_on_off = ring_maker.run(dataset.to_image())
         stacked_on_off.stack(dataset_on_off)
 
-    # we'll convert our map dataset into a spectrum dataset,
-    # which is more helpful for extracting info
+    # spectral model for estimator
+    #amp, idx = config["spectrum"]["params"]
+    #spectral_model = PowerLawSpectralModel(
+    #    amplitude=float(amp) * u.Unit("cm-2 s-1 TeV-1"),
+    #    index=float(idx),
+    #    reference=1 * u.TeV,
+    #)
+
     output_dataset = stacked_on_off.to_spectrum_dataset(
         CircleSkyRegion(center=source_pos, radius=config["sky_map"]["theta"] * u.deg),
         containment_correction=True,
     )
     output_dict = output_dataset.info_dict()
 
-    # spectral model for estimator
-    amp, idx = config["spectrum"]["params"]
-    spectral_model = PowerLawSpectralModel(
-        amplitude=float(amp) * u.Unit("cm-2 s-1 TeV-1"),
-        index=float(idx),
-        reference=1 * u.TeV,
-    )
-
     estimator = ExcessMapEstimator(
         config["sky_map"]["theta"] * u.deg,
-        selection_optional=["all"],
-        spectral_model=spectral_model,
+        selection_optional=[],
+        #spectral_model=spectral_model,
+        correlate_off=False
     )
     lima_maps = estimator.run(stacked_on_off)
     significance_map = lima_maps["sqrt_ts"]
     excess_map = lima_maps["npred_excess"]
 
-    counts = output_dict["counts"]
-    excess = output_dict["excess"]
-    background = output_dict["background"]
-    alpha = output_dict["alpha"]
-    sigma = output_dict["sqrt_ts"]
+    counts = lima_maps['npred'].get_by_coord([source_pos.ra, source_pos.dec, 1 * u.TeV])[0]
+    background = lima_maps['npred_background'].get_by_coord([source_pos.ra, source_pos.dec, 1 * u.TeV])[0]
+    sigma = lima_maps['sqrt_ts'].get_by_coord([source_pos.ra, source_pos.dec, 1 * u.TeV])[0]
+    alpha = estimate_alpha(sigma, counts, background)
     exposure = output_dict["ontime"]
 
     #significance_map_off = significance_map * exclusion_mask
@@ -231,7 +255,6 @@ def rbm_analysis(config):
 
     return (
         counts,
-        excess,
         background,
         alpha,
         sigma,
@@ -312,8 +335,8 @@ def rbm_plots(
     )
 
     # Now, fit the off distribution with a Gaussian
-    mu, std = norm.fit(significance_off)
-    x = np.linspace(-8, 8, 50)
+    mu, std = norm.fit(significance_off[exclusion_mask.data.flatten()])
+    x = np.linspace(-5, 10, 50)
     p = norm.pdf(x, mu, std)
     ax.plot(x, p, lw=2, color="black")
     ax.legend()
@@ -376,12 +399,13 @@ def write_validation_info(
     norm_err = spectab["error"][1]
 
     output_dict = {
-        "analysis notebook version": 1.0,
+        "analysis notebook version": 0.2
+        "gammapy-tools version": 1.0.0,
         "source": config["run_selection"]["source_name"],
         "gammapy version": gammapy.__version__,
-        "exposure": float(exposure.value) / 60,
+        "exposure (min)": float(exposure.value) / 60,
         "on": int(counts),
-        "off": int(background),
+        "off": f"{background:.2f}",
         "alpha": f"{alpha:.3e}",
         "significance": f"{sigma:.2f}",
         "flux": f"{flux:.2e}",

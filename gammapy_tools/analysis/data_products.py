@@ -240,7 +240,7 @@ def make_spectrum_RE(config, plot=True, return_stacked=False):
     else:
         plt.clf()
 
-    return flux_points, result_joint.models, time, sig, integral_flux, integral_flux_err
+    return flux_points, result_joint.models, time, sig, integral_flux, integral_flux_err[0]
 
 
 def get_flux_lc(config, type="flux"):
