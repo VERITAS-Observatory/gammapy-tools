@@ -53,7 +53,7 @@ background_selection:
     # Maximum azimuth difference
     az_diff : 45
     # Minimum number of telescopes
-    n_tels : 3
+    n_tels : 4
     # Maximum time between runs in days - this doesn't need to be set if you're using same_szn
     time_max : 180
     # Whether bkgs should come from same season as data
