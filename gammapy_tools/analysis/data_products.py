@@ -7,6 +7,7 @@ from astropy.table import Table
 from os import environ
 import os
 from astropy.io import fits
+from typing import Optional, Tuple
 
 # %matplotlib inline
 import matplotlib.pyplot as plt
@@ -18,7 +19,7 @@ from gammapy.datasets import (
     FluxPointsDataset,
     SpectrumDataset,
 )
-from gammapy.estimators import FluxPointsEstimator
+from gammapy.estimators import FluxPointsEstimator, FluxPoints
 from gammapy.makers import (
     ReflectedRegionsBackgroundMaker,
     SafeMaskMaker,
@@ -36,7 +37,9 @@ from gammapy.estimators import LightCurveEstimator
 from gammapy.visualization import plot_spectrum_datasets_off_regions
 
 
-def make_spectrum_RE(config, plot=True, return_stacked=False):
+def make_spectrum_RE(
+    config: dict, plot: Optional[bool] = True, return_stacked: Optional[bool] = False
+) -> Tuple[FluxPoints, SkyModel, float, u.Quantity, u.Quantity, u.Quantity]:
     """Make a RE spectrum
 
     Parameters
@@ -51,6 +54,8 @@ def make_spectrum_RE(config, plot=True, return_stacked=False):
     spectral_model: best-fit spectral model object
     time: time for cumulative significance
     sig: sqrt(ts) for cumulative significance
+    integral_flux : integral flux from spectral model
+    integral_flux_err : error on integral flux
     """
 
     e_min = config["spectrum"]["e_min"]
@@ -215,6 +220,13 @@ def make_spectrum_RE(config, plot=True, return_stacked=False):
         spectral_model = LogParabolaSpectralModel(
             alpha=float(alp), amplitude=float(amp), reference=1 * u.TeV, beta=float(bet)
         )
+    # calculate integral flux from spectral model
+    integral_flux = spectral_model.integral(
+        e_min * u.Unit("TeV"), e_max * u.Unit("TeV")
+    )
+    integral_flux_err = spectral_model.integral_error(
+        e_min * u.Unit("TeV"), e_max * u.Unit("TeV")
+    )
 
     model = SkyModel(spectral_model=spectral_model, name="my_source")
     datasets.models = [model]
@@ -243,144 +255,17 @@ def make_spectrum_RE(config, plot=True, return_stacked=False):
     else:
         plt.clf()
 
-    return flux_points, result_joint.models, time, sig
-
-
-def get_integral_flux(config, spectral_model):
-    """Outputs integral flux calculated from a spectral model
-
-    Parameters
-    ----------
-    config: configuration file
-
-    Returns
-    ----------
-    flux_points: flux points object
-    """
-    if config["run_selection"]["pos_from_DL3"]:  # get position from DL3 header
-        hdul = fits.open(
-            config["io"]["out_dir"] + os.listdir(config["io"]["out_dir"])[0]
-        )
-        source_pos = SkyCoord(
-            hdul[1].header["RA_OBJ"] * u.deg, hdul[1].header["DEC_OBJ"] * u.deg
-        )
-    else:  # get position from ra/dec [deg]
-        source_pos = SkyCoord(
-            config["run_selection"]["source_ra"],
-            config["run_selection"]["source_dec"],
-            frame="icrs",
-            unit="deg",
-        )
-
-    threshold = config["lightcurve"]["threshold"]
-    # exclusion regions - should be upgraded to exclusion_finder code eventually
-
-    # apply exclusion regions
-    exclusion_regions = []
-
-    exclusion_regions.append(
-        CircleSkyRegion(
-            center=source_pos, radius=config["sky_map"]["on_exclusion_region"] * u.deg
-        )
+    return (
+        flux_points,
+        result_joint.models,
+        time,
+        sig,
+        integral_flux,
+        integral_flux_err[0],
     )
 
-    if (
-        len(config["sky_map"]["exclusion_regions"]) > 0
-    ):  # should be a list of CircleSkyRegions
-        for region in config["sky_map"]["exclusion_regions"]:
-            ra, dec = region[0]
-            radius = region[1]
-            exclusion_regions.append(
-                CircleSkyRegion(
-                    center=SkyCoord(ra, dec, unit="deg", frame="icrs"),
-                    radius=radius * u.deg,
-                )
-            )
-    # exclude bright stars
-    star_data = np.loadtxt(
-        environ["GAMMAPY_DATA"] + "/catalogs/Hipparcos_MAG8_1997.dat",
-        usecols=(0, 1, 2, 3, 4),
-    )
-    star_cat = Table(
-        {
-            "ra": star_data[:, 0],
-            "dec": star_data[:, 1],
-            "id": star_data[:, 2],
-            "mag": star_data[:, 3],
-            "colour": star_data[:, 4],
-        }
-    )
-    star_mask = (
-        np.sqrt(
-            (star_cat["ra"] - source_pos.ra.deg) ** 2
-            + (star_cat["dec"] - source_pos.dec.deg) ** 2
-        )
-        < 2.0
-    )
-    star_mask &= (star_cat["mag"] + star_cat["colour"]) < config["sky_map"][
-        "min_star_brightness"
-    ]
 
-    # append stars to exclusion list
-    for src in star_cat[star_mask]:
-        exclusion_regions.append(
-            CircleSkyRegion(
-                center=SkyCoord(src["ra"], src["dec"], unit="deg", frame="icrs"),
-                radius=0.3 * u.deg,
-            )
-        )
-
-    dataset_empty = SpectrumDataset.create(geom=geom, energy_axis_true=energy_axis_true)
-
-    dataset_maker = SpectrumDatasetMaker(
-        containment_correction=True, selection=["counts", "exposure", "edisp"]
-    )
-
-    geom = WcsGeom.create(
-        npix=(150, 150), binsz=0.05, skydir=source_pos, proj="TAN", frame="icrs"
-    )
-
-    for i, exclusion_region in enumerate(exclusion_regions):
-        if i == 0:
-            exclusion_mask = ~geom.region_mask([exclusion_region])
-        else:
-            exclusion_mask *= ~geom.region_mask([exclusion_region])
-    if len(exclusion_regions) > 0:
-        exclusion_mask.plot()
-        if plot:
-            plt.show()
-
-    # create reflected regions background
-    bkg_maker = ReflectedRegionsBackgroundMaker(exclusion_mask=exclusion_mask)
-    safe_mask_masker = SafeMaskMaker(methods=["aeff-max"], aeff_percent=10)
-    datasets = Datasets()
-
-    for obs_id, observation in zip(obs_ids, observations):
-        dataset = dataset_maker.run(dataset_empty.copy(name=str(obs_id)), observation)
-        dataset_on_off = bkg_maker.run(dataset, observation)
-        dataset_on_off = safe_mask_masker.run(dataset_on_off, observation)
-        datasets.append(dataset_on_off)
-
-    # construct spectral model
-    spectral_model = PowerLawSpectralModel(
-        amplitude=float(norm) * u.Unit("cm-2 s-1 TeV-1"),
-        index=float(index),
-        reference=1 * u.TeV,
-    )
-
-    model = SkyModel(spectral_model=spectral_model, name="my_source")
-    datasets.models = [model]
-    fit_joint = Fit()
-    result_joint = fit_joint.run(datasets=datasets)
-
-    # get flux by integrating spectral model
-    flux = result_join.models.integral(threshold * u.TeV, 30 * u.TeV).value
-    flux_err = result_join.models.integral_error(threshold * u.TeV, 30 * u.TeV)[1].value
-
-    return flux, flux_err
-
-
-def get_flux_lc(config, type="flux"):
+def get_flux_lc(config: dict, type: Optional[str] = "flux") -> LightCurveEstimator:
     """Output run-wise flux points and the overall flux of a 1D dataset
 
     Parameters
@@ -405,7 +290,7 @@ def get_flux_lc(config, type="flux"):
     else:
         observations = datastore.get_observations(required_irf="all-optional")
 
-    amp, idx = config["lightcurve"]["params"]
+    amp, idx = config["spectrum"]["params"]
 
     if config["run_selection"]["pos_from_DL3"]:  # get position from DL3 header
         hdul = fits.open(
@@ -426,13 +311,14 @@ def get_flux_lc(config, type="flux"):
     e_max = 100  # config["spectrum"]["e_max"]
     nbin = config["spectrum"]["e_bins"]
 
-    selection = dict(
-        type="sky_circle",
-        frame="icrs",
-        lon=source_pos.ra,
-        lat=source_pos.dec,
-        radius=2 * u.deg,
-    )
+    # Currently unused?
+    # _selection = dict(
+    #     type="sky_circle",
+    #     frame="icrs",
+    #     lon=source_pos.ra,
+    #     lat=source_pos.dec,
+    #     radius=2 * u.deg,
+    # )
 
     # energy binning
     energy_axis = MapAxis.from_energy_bounds(
