@@ -94,6 +94,7 @@ spectrum :
     # Spectral type
     type : "PL"
     # Spectral fit parameters (initial guess) - for power law: array of [normalization, spectral index]
+    # Assumes normalization is in units of TeV^-1 cm^-2 s^-1
     params : [3.45e-11,2.6]
     
 lightcurve:
@@ -101,9 +102,9 @@ lightcurve:
     bin_size_min: 1000
     
 sky_map:
-    # Energy threshold for events to be included in the sky map
+    # Energy threshold for events to be included in the sky map (TeV)
     e_min: 0.01
-    # Maximum energy for sky map
+    # Maximum energy for sky map (TeV)
     e_max: 100
     # Number of energy bins for the sky map
     n_bins: 30
@@ -117,9 +118,9 @@ sky_map:
     aeff_max_percent: 0.1
     #exclusion regions are lists of lists of [[SkyCoord, radius], [SkyCoord, radius], ...]
     exclusion_regions: []
-    #theta defines the ON region size
+    #theta defines the ON region size (deg)
     theta: 0.0894427191
-    #exclusion region around the source
+    #exclusion region around the source (deg)
     on_exclusion_region: 0.35
     #RBM parameters
     ring_rin: "0.6 deg"
