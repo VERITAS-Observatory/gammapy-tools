@@ -49,6 +49,7 @@ dependencies = [
     #"pyV2DL3",
     "PyYAML",
     "regions",
+    "tqdm",
 ]
 
 [project.optional-dependencies]
