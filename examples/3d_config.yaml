@@ -1,0 +1,68 @@
+io:
+    # runlist of runs for analysis (one run number per line)
+    runlist: "/raid/romulus/swong/ED490/Eventdisplay_AnalysisScripts_VTS/scripts/crab_test.txt"
+    # datastore containing DL3 files to use for bkg generation
+    search_datastore : "/raid/romulus/dl3/ed/dl3_fullenclosure_moderate2tel/"
+    # DL3 file location (without bkgs)
+    in_dir : "/raid/romulus/swong/mydl3/crabtest/"
+    # where to write DL3 files with appended bkgs
+    out_dir : "/raid/romulus/swong/mydl3/crabtestbkgs3d/" 
+
+    # Whether or not to generate the background from the run
+    from_run : false
+    # Whether or not to analyze runs from a runlist or all runs in the results_dir
+    from_runlist: true
+    # whether or not to generate 3D bkgs (generate 2D if false)
+    3d_bkg: true
+
+binning:
+    # Energy binning
+    e_min: 0.1
+    e_max: 100
+    e_bins: 10
+    # Offset/wobble binning
+    off_min: 0
+    off_max: 3.5
+    off_bins: 35
+
+# for parallel processing - this won't work for 3D currently
+config:
+    njobs : 16
+
+exclusion:
+    star_cat : "./Hipparcos_MAG8_1997.dat"
+    # Exculde region around a simbad resolveable source name
+    # Expecting name, exclusion
+    exclude_source_name : 
+    # Exculde region around a given ra, dec
+    exclude_regions :
+    # Exculde region around a given ra, dec
+    # Exculde region around a given ra, dec
+    # exclude_source_pos : [ ("287.10 deg", "6.39 deg", "0.5 deg"]
+    # Exculde entire run within a distance to a given ra/dec
+    # Expecting ra, dec, exclusion
+    # exclude_source_run : [ ("287.10 deg", "6.39 deg", "3.5 deg"]
+
+
+background_selection:
+    # maximum allowable difference in NSB
+    nsb_diff : 1.5
+    # maximum 1/sin(el) difference
+    el_diff : 1
+    # maximum az difference
+    az_diff : 45
+    # Minimum number of telescopes
+    n_tels : 4
+    # Maximum time between runs in days - set to be arbitrarily large if using same_szn
+    time_max : 180
+    # Whether or not to smooth the background
+    smooth : false
+    smooth_sigma : 1
+    # Whether bkgs should come from same season as data
+    same_szn : true
+    # how much data to use as bkgs - otherwise uses full datastore
+    time_request : 50
+    # if time request is set, KL divergence needs to be true (finds closest bkgs in parameter space)
+    KL_DIV: true
+    # whether or not to store the runs used as bkgs
+    store_KL: false

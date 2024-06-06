@@ -8,9 +8,10 @@ from multiprocess import Pool
 
 
 # Gammapy stuff
-from gammapy.irf import Background2D
+from gammapy.irf import Background2D,Background3D
 from gammapy.maps import MapAxis
 from gammapy.data import Observation
+from gammapy.datasets import MapDatasetEventSampler, Datasets, MapDatasetOnOff
 
 # from gammapy.catalog import SourceCatalog3HWC, SourceCatalogGammaCat
 
@@ -336,6 +337,55 @@ class BackgroundModelEstimator:
 
         return rate
 
+class Background3DModelEstimator:
+    
+    def __init__(self,
+        energy, 
+        fov_lon, 
+        fov_lat,
+        smooth: bool = False,
+        excluded_sources: list = [],
+        smooth_sigma: float = 1,):
+
+        self.excluded_sources = excluded_sources
+        self.smooth = smooth
+        self.smooth_sigma = smooth_sigma
+        self.counts = self._make_bkg3d(energy, fov_lon, fov_lat, unit="")
+        self.exposure = self._make_bkg3d(energy, fov_lon, fov_lat, unit="s TeV sr")
+        self.exclusion = ExclusionFinder()
+    @staticmethod
+    def _make_bkg3d(energy, fov_lon, fov_lat, unit):
+        return Background3D(axes=[energy, fov_lon, fov_lat], unit=unit)
+
+    def run(self, observations):
+        for obs in observations:
+            self.fill_counts(obs)
+            self.fill_exposure(obs)
+
+    def fill_counts(self, obs):
+        energy, fov_lon, fov_lat = self.counts.axes
+        run_ra = obs.pointing.fixed_icrs.ra.deg
+        run_dec = obs.pointing.fixed_icrs.dec.deg
+        events = obs.events
+        events = MapDatasetEventSampler.event_det_coords(obs, events)
+        run_mask = self.exclusion.exclude_events(events.table, run_ra, run_dec)
+        counts = np.histogramdd(
+            (events.energy.to('TeV')[run_mask], events.table['DETX'][run_mask], events.table['DETY'][run_mask]),
+            (energy.edges, fov_lon.edges, fov_lat.edges))[0]        
+        self.counts.data += counts
+            
+    def fill_exposure(self, obs):
+        time = obs.observation_time_duration
+        bin_volume = self.exposure.axes.bin_volume()
+        self.exposure.quantity += time * bin_volume
+
+    @property
+    def background_rate(self):
+        rate = deepcopy(self.counts)
+        rate.quantity /= self.exposure.quantity
+        if self.smooth:
+            rate = smooth(rate, sigma=self.smooth_sigma)
+        return rate
 
 def smooth(bkg: Background2D, sigma: float = 1.0) -> Background2D:
     """Smooths background rates from BackgroundModelEstimator.background_rate (bkg input)

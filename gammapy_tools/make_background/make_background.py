@@ -18,7 +18,7 @@ from gammapy.maps import MapAxis
 from pyV2DL3.generateObsHduIndex import create_obs_hdu_index_file
 
 # From here
-from .background_models import BackgroundModelEstimator
+from .background_models import BackgroundModelEstimator,Background3DModelEstimator
 from .background_tools import process_run, get_requested_exposure
 from ..utils.run_details import find_data_mimic
 
@@ -45,6 +45,7 @@ def get_background_for_run(parms: tuple[float, dict]) -> tuple[str, list]:
 
     in_dir = config["io"]["in_dir"]
     out_dir = config["io"]["out_dir"]
+    make_3d = config["io"]["3d_bkg"]
 
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
@@ -130,14 +131,29 @@ def get_background_for_run(parms: tuple[float, dict]) -> tuple[str, list]:
         smooth_sigma = 1
         if "smooth_sigma" in config["background_selection"]:
             smooth_sigma = config["background_selection"]["smooth_sigma"]
-
-        estimator = BackgroundModelEstimator(
-            energy,
-            offset,
-            smooth=config["background_selection"]["smooth"],
-            smooth_sigma=smooth_sigma,
-            njobs=config["config"]["njobs"],
+        
+        if make_3d:
+            fov_lon = MapAxis.from_bounds(
+                -config["binning"]["off_max"], config["binning"]["off_max"], nbin=config["binning"]["off_bins"], interp="lin", unit="deg",name="fov_lon"
+            )
+            fov_lat =MapAxis.from_bounds(
+                -config["binning"]["off_max"], config["binning"]["off_max"], nbin=config["binning"]["off_bins"], interp="lin", unit="deg",name="fov_lat"
+            )
+            estimator = Background3DModelEstimator(
+                energy,
+                fov_lon,
+                fov_lat,
+                smooth=config["background_selection"]["smooth"],
+                smooth_sigma=smooth_sigma,
         )
+        else:
+            estimator = BackgroundModelEstimator(
+                energy,
+                offset,
+                smooth=config["background_selection"]["smooth"],
+                smooth_sigma=smooth_sigma,
+                njobs=config["config"]["njobs"],
+            )
 
         estimator.run(observations)
         # Check if a background currently exists
