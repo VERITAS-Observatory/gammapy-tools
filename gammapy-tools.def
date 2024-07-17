@@ -35,7 +35,7 @@ Stage: build
 
     python3 -m venv /opt/gammapy_tools
     . /opt/gammapy_tools/bin/activate
-    pip install iminuit cmasher pip papermill matplotlib pip "jupyterlab==4.0.12"  notebook ipykernel ipython ipywidgets
+    pip install iminuit cmasher pip papermill matplotlib uproot "jupyterlab==4.0.12"  notebook ipykernel ipython ipywidgets
     #mamba install -c conda-forge iminuit cmasher pip papermill matplotlib pip "jupyterlab==4.0.12"  notebook ipykernel ipython ipywidgets --yes 
     
     
