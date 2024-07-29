@@ -16,6 +16,7 @@ Stage: build
     # Port for jupyter lab
     export JPORT=8000
     export GAMMAPY_DATA=/gamma-tools/gammapy-datasets/1.2/
+    export GAMMAPY_DATA=/gamma-tools/gammapy-datasets/dev
     #. "/opt/conda/etc/profile.d/conda.sh"
     #. /opt/conda/bin/activate 
     #export PATH=/opt/conda/bin/:$PATH
