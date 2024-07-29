@@ -16,6 +16,7 @@ Stage: build
     # Port for jupyter lab
     export JPORT=8000
     export GAMMAPY_DATA=/gamma-tools/gammapy-datasets/1.2/
+    export GAMMAPY_DATA=/gamma-tools/gammapy-datasets/dev
     #. "/opt/conda/etc/profile.d/conda.sh"
     #. /opt/conda/bin/activate 
     #export PATH=/opt/conda/bin/:$PATH
@@ -26,7 +27,7 @@ Stage: build
 
     apt update
     apt upgrade -y
-    apt install curl bash git gcc btop emacs python3 python3-pip python3.12-venv -y
+    apt install curl bash git gcc btop emacs python3 python3-pip python3.12-venv wget zsh -y
 
     # Install mamba and base env
     #curl -L -O "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh"
@@ -68,6 +69,9 @@ Stage: build
     python -m pip cache purge
 
 
+    # Add the updated version of gammapy/datasets/map.py
+    wget https://raw.githubusercontent.com/gammapy/gammapy/main/gammapy/datasets/map.py -O /opt/gammapy_tools/lib/python3.12/site-packages/gammapy/datasets/map.py
+
 %runscript
     cd /local_data ; jupyter-lab --port=$JPORT
 
@@ -81,5 +85,5 @@ Stage: build
     Version v0.1.0
 
 %help
-    This is a container with juptyer lab pre-installed with gammapy, v2dl3 and gammapy-background-analysis
+    This is a container with juptyer lab pre-installed with gammapy, v2dl3 and gammapy-tools
 
