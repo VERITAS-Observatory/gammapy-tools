@@ -8,6 +8,7 @@ from os import environ
 from astropy.table import Table
 from scipy.optimize import fsolve
 from typing import Optional, Tuple
+from tqdm.auto import tqdm
 
 # %matplotlib inline
 import astropy.units as u
@@ -17,16 +18,21 @@ import matplotlib.pyplot as plt
 
 import gammapy
 from gammapy.analysis import Analysis, AnalysisConfig
-from gammapy.datasets import MapDatasetOnOff
+from gammapy.datasets import MapDatasetOnOff,MapDataset
 from gammapy.estimators import ExcessMapEstimator
-from gammapy.makers import RingBackgroundMaker
+from gammapy.makers import RingBackgroundMaker,SafeMaskMaker,MapDatasetMaker
 from gammapy.maps.wcs.ndmap import WcsNDMap
 from gammapy.modeling.models import SpectralModel
+from gammapy.data import DataStore
+from gammapy.maps import MapAxis, WcsGeom
+
+import seaborn as sns
+sns.set_theme(font="MathJax_Main",font_scale=2,style='ticks',context='paper',palette='pastel')
 
 # importing package version
 from .._version import __version__ as gpt_version
 
-__notebook_version__ = "0.2"
+__notebook_version__ = "0.3"
 
 log = logging.getLogger(__name__)
 
@@ -89,17 +95,16 @@ def rbm_analysis(
     if not os.path.exists(config["io"]["results_dir"]):
         os.makedirs(config["io"]["results_dir"])
 
-    data_store = config["io"]["out_dir"]
-
-    map_deg = config["sky_map"]["map_deg"]
-    source_config = AnalysisConfig()
-    source_config.datasets.type = "3d"
-    source_config.observations.datastore = data_store
+    data_store = DataStore.from_dir(config["io"]["out_dir"])
+    
     # select only observations from runlist, if specified
     if config["io"]["from_runlist"]:
-        source_config.observations.obs_ids = np.genfromtxt(
+        obs_ids = np.genfromtxt(
             config["io"]["runlist"], unpack=True
         ).tolist()
+        observations = data_store.get_observations(obs_id=obs_ids,required_irf="full-enclosure")
+    else:
+        observations = data_store.get_observations(required_irf="full-enclosure")
 
     if config["run_selection"]["pos_from_DL3"]:
         # get RA and DEC from first run
@@ -118,67 +123,23 @@ def rbm_analysis(
             unit="deg",
         )
 
-    source_config.datasets.geom.wcs.skydir = {
-        "lon": source_pos.ra,
-        "lat": source_pos.dec,
-        "frame": "icrs",
-    }
-
-    source_config.observations.required_irf = ["aeff", "edisp"]
-
-    source_config.datasets.geom.wcs.width = {
-        "width": f"{map_deg} deg",
-        "height": f"{map_deg} deg",
-    }
-    source_config.datasets.geom.wcs.binsize = config["sky_map"]["bin_sz"] * u.deg
-    source_config.datasets.map_selection = ["counts", "exposure", "background", "edisp"]
-
-    # Cutout size (for the run-wise event selection)
-    source_config.datasets.geom.selection.offset_max = map_deg * u.deg
-
-    # We now fix the energy axis for the counts map - (the reconstructed energy binning)
-    source_config.datasets.geom.axes.energy.min = (
-        str(config["sky_map"]["e_min"]) + " TeV"
+    energy_axis = MapAxis.from_energy_bounds(
+        config["sky_map"]["e_min"],config["sky_map"]["e_max"],10,unit="TeV"
     )
-    source_config.datasets.geom.axes.energy.max = (
-        str(config["sky_map"]["e_max"]) + " TeV"
-    )
-    source_config.datasets.geom.axes.energy.nbins = 30
-
-    source_config.excess_map.correlation_radius = (
-        str(config["sky_map"]["theta"]) + " deg"
+    # Reduced IRFs are defined in true energy (i.e. not measured energy).
+    energy_axis_true = MapAxis.from_energy_bounds(
+        config["sky_map"]["e_min"], config["sky_map"]["e_max"], 200, unit="TeV", name="energy_true"
     )
 
-    # We need to extract the ring for each observation separately, hence, no stacking at this stage
-    source_config.datasets.stack = False
-
-    source_config.datasets.safe_mask.parameters = {
-        "aeff_percent": config["sky_map"]["aeff_max_percent"],
-        "offset_max": config["sky_map"]["offset_max"] * u.deg,
-    }
-    source_config.datasets.safe_mask.methods = ["aeff-max", "offset-max"]
-
-    analysis = Analysis(source_config)
-
-    analysis.config.datasets.geom.axes.energy_true = (
-        analysis.config.datasets.geom.axes.energy
+    map_deg = config["sky_map"]["map_deg"]
+    geom = WcsGeom.create(
+        skydir=(source_pos.ra.value, source_pos.dec.value),
+        binsz=config["sky_map"]["bin_sz"],
+        width=(map_deg, map_deg),
+        frame="icrs",
+        proj="CAR",
+        axes=[energy_axis],
     )
-
-    analysis.get_observations()
-    analysis.get_datasets()
-
-    # simbad = Simbad()
-    # simbad.reset_votable_fields()
-    # simbad.add_votable_fields("ra", "dec", "flux(B)", "flux(V)", "jp11")
-    # simbad.remove_votable_fields("coordinates")
-
-    # srcs_tab = simbad.query_region(source_pos, radius=1.5 * u.deg)
-    # srcs_tab = srcs_tab[srcs_tab["FLUX_B"] < config["sky_map"]["min_star_brightness"]]
-    # srcs_tab = srcs_tab[srcs_tab["FLUX_V"] != np.ma.masked]
-
-    # get the geom that we use
-    geom = analysis.datasets[0].counts.geom
-    energy_axis = analysis.datasets[0].counts.geom.axes["energy"]
     geom_image = geom.to_image().to_cube([energy_axis.squash()])
 
     # Make the exclusion mask
@@ -218,7 +179,6 @@ def rbm_analysis(
         )
         < 2.0
     )
-    # star_mask &= (star_cat["mag"] + star_cat["colour"]) < 8
     star_mask &= (star_cat["mag"]) < 8
 
     for src in star_cat[star_mask]:
@@ -231,32 +191,32 @@ def rbm_analysis(
 
     exclusion_mask = ~geom_image.region_mask(all_ex)
     # exclusion_mask.sum_over_axes().plot()
+    
+    stacked = MapDataset.create(
+        geom=geom, energy_axis_true=energy_axis_true, name="stacked"
+    )
+
+    # the only safemaskmaker parameter we want for sky maps is offset-max
+    offset_max = config["sky_map"]["offset_max"] * u.deg
+    maker = MapDatasetMaker()
+    maker_safe_mask = SafeMaskMaker(
+        methods=["offset-max"], offset_max=offset_max
+    )
+
+    # create stacked dataset with all observations
+    for obs in tqdm(observations):
+        dataset = maker.run(stacked,obs)
+        dataset = maker_safe_mask.run(dataset, obs)
+        stacked.stack(dataset)
 
     ring_maker = RingBackgroundMaker(
         r_in=config["sky_map"]["ring_rin"],
         width=config["sky_map"]["ring_width"],
         exclusion_mask=exclusion_mask,
     )
-
-    energy_axis_true = analysis.datasets[0].exposure.geom.axes["energy_true"]
-    stacked_on_off = MapDatasetOnOff.create(
-        geom=geom_image, energy_axis_true=energy_axis_true, name="stacked"
-    )
-
-    for dataset in analysis.datasets:
-        # Ring extracting makes sense only for 2D analysis
-        dataset_on_off = ring_maker.run(dataset.to_image())
-        stacked_on_off.stack(dataset_on_off)
-
-    # spectral model for estimator
-    # amp, idx = config["spectrum"]["params"]
-    # spectral_model = PowerLawSpectralModel(
-    #    amplitude=float(amp) * u.Unit("cm-2 s-1 TeV-1"),
-    #    index=float(idx),
-    #    reference=1 * u.TeV,
-    # )
-
-    output_dataset = stacked_on_off.to_spectrum_dataset(
+    dataset_on_off = ring_maker.run(stacked)
+    
+    output_dataset = dataset_on_off.to_spectrum_dataset(
         CircleSkyRegion(center=source_pos, radius=config["sky_map"]["theta"] * u.deg),
         containment_correction=True,
     )
@@ -268,7 +228,7 @@ def rbm_analysis(
         # spectral_model=spectral_model,
         correlate_off=False,
     )
-    lima_maps = estimator.run(stacked_on_off)
+    lima_maps = estimator.run(dataset_on_off)
     significance_map = lima_maps["sqrt_ts"]
     excess_map = lima_maps["npred_excess"]
 
@@ -283,10 +243,7 @@ def rbm_analysis(
     )[0]
     alpha = estimate_alpha(sigma, counts, background)
     exposure = output_dict["ontime"]
-
-    # significance_map_off = significance_map * exclusion_mask
-    # significance_map_off = significance_map[exclusion_mask]
-
+    
     return (
         counts,
         background,
@@ -304,11 +261,10 @@ def rbm_plots(
     spectral_points: Table,
     excess_map: WcsNDMap,
     significance_map: WcsNDMap,
-    c_sig: np.ndarray,
-    c_time: np.ndarray,
     exclusion_mask: WcsNDMap,
     save: Optional[bool] = True,
     plot: Optional[bool] = True,
+    spectrum: Optional[bool] = True,
 ) -> None:
     """
     Makes + optionally saves significance/excess maps,
@@ -327,17 +283,17 @@ def rbm_plots(
 
     # significance & excess plots
     fig, (ax1, ax2) = plt.subplots(
-        figsize=(11, 5), subplot_kw={"projection": significance_map.geom.wcs}, ncols=2
+        figsize=(13, 5), subplot_kw={"projection": significance_map.geom.wcs}, ncols=2
     )
-
+    cmap=sns.color_palette("magma", as_cmap=True)
     ax1.set_title("Significance map")
     if config["sky_map"]["truncate"]:
-        significance_map.plot(ax=ax1, add_cbar=True, vmin=-5, vmax=5)
+        significance_map.plot(ax=ax1, add_cbar=True, vmin=-5, vmax=5,cmap=cmap)
     else:
-        significance_map.plot(ax=ax1, add_cbar=True)
+        significance_map.plot(ax=ax1, add_cbar=True,cmap=cmap)
 
     ax2.set_title("Excess map")
-    excess_map.plot(ax=ax2, add_cbar=True)
+    excess_map.plot(ax=ax2, add_cbar=True,cmap=cmap)
     plt.savefig(
         config["plot_names"] + "sig_excess.png", format="png", bbox_inches="tight"
     )
@@ -356,25 +312,27 @@ def rbm_plots(
     ax.hist(
         significance_all,
         density=True,
-        alpha=0.5,
-        color="red",
+        alpha=0.9,
+        color="palevioletred",
         label="all bins",
-        bins=np.linspace(-5, 10, 100),
+        bins=np.linspace(-5, 10, 50),
     )
 
     ax.hist(
         significance_off,
         density=True,
-        alpha=0.5,
-        color="blue",
+        alpha=0.9,
+        color="darkseagreen",
         label="off bins",
-        bins=np.linspace(-5, 10, 100),
+        bins=np.linspace(-5, 10, 50),
     )
 
     # Now, fit the off distribution with a Gaussian
     mu, std = norm.fit(significance_off)
     x = np.linspace(-10, 10, 100)
     p = norm.pdf(x, mu, std)
+    gauss = norm.pdf(x,0,1)
+    ax.plot(x,gauss,lw=2,ls='--',color='black')
     ax.plot(x, p, lw=2, color="black")
     ax.legend()
     ax.set_xlabel("Significance")
@@ -390,30 +348,16 @@ def rbm_plots(
         plt.show()
     else:
         plt.clf()
-    # cumulative significance
-    plt.plot(c_time, c_sig, "ko")
-    plt.xlabel("Time [h]")
-    plt.ylabel(r"Significance [$\sigma$]")
-    plt.title("Cumulative Significance")
-    plt.savefig(
-        config["io"]["results_dir"] + config["plot_names"] + "cumulative_sig.png",
-        format="png",
-        bbox_inches="tight",
-    )
-    if plot:
-        plt.show()
-    else:
-        plt.clf()
 
-    # spectral points
-    spectral_points.plot(sed_type="dnde")
-    plt.savefig(
-        config["io"]["results_dir"] + config["plot_names"] + "spectral_points.png",
-        format="png",
-        bbox_inches="tight",
-    )
-    if plot:
-        plt.show()
+    if spectrum:
+        spectral_points.plot(sed_type="dnde")
+        plt.savefig(
+            config["io"]["results_dir"] + config["plot_names"] + "spectral_points.png",
+            format="png",
+            bbox_inches="tight",
+        )
+        if plot:
+            plt.show()
 
     return
 
@@ -421,24 +365,33 @@ def rbm_plots(
 def write_validation_info(
     config: dict,
     spectral_model: SpectralModel,
-    flux: float,
-    flux_err: float,
     counts: float,
     background: float,
     alpha: float,
     sigma: float,
     exposure: float,
+    spectrum: Optional[bool] = True
 ) -> None:
 
     if not os.path.exists(config["io"]["results_dir"]):
         os.makedirs(config["io"]["results_dir"])
 
-    spectab = spectral_model.to_parameters_table()
-    index = spectab["value"][0]
-    index_err = spectab["error"][0]
-    norm = spectab["value"][1]
-    norm_err = spectab["error"][1]
-
+    if spectrum:
+        # calculate integral flux from spectral model
+        e_min = config["spectrum"]["e_min"]*u.TeV
+        e_max = config["spectrum"]["e_max"]*u.TeV
+        
+        flux,flux_err = spectral_model.integral_error(e_min,e_max)
+        spectab = spectral_model.to_dict()
+        if 'components' in spectab.keys():
+            spectab = spectab['components'][0]
+        index = spectab["spectral"]["parameters"][0]["value"]
+        index_err = spectab["spectral"]["parameters"][0]["error"]
+        norm = spectab["spectral"]["parameters"][1]["value"]
+        norm_err = spectab["spectral"]["parameters"][1]["error"]
+    
+    else:
+        flux=flux_err=index=index_err=norm=norm_err = 0
     output_dict = {
         "analysis notebook version": __notebook_version__,
         "gammapy-tools version": gpt_version,
@@ -449,7 +402,7 @@ def write_validation_info(
         "off": f"{background:.2f}",
         "alpha": f"{alpha:.3e}",
         "significance": f"{sigma:.2f}",
-        "flux": f"{flux:.2e}",
+        "integral_flux": f"{flux:.2e}",
         "flux_err": f"{flux_err:.2e}",
         "flux_UL": "n/a",
         "norm": f"{norm:.2e}",
@@ -464,5 +417,7 @@ def write_validation_info(
     print("======== RESULTS ========")
     for key, value in output_dict.items():
         print(key, ":", value)
-
+    
+    # print in wiki format
+    print(f'\n||notebook v2.0||{float(exposure.value) / 60}||{int(counts)}||{int(background)}||{alpha:.3e}||{sigma:.2f}||{flux:.2e} cm2 s-1||{flux_err:.2e} cm2 s-1||{norm:.2e} TeV-1 s-1 cm-2||{norm_err:.2e} TeV-1 s-1 cm-2||{index:.2f}||{index_err:.2f}||')
     return
