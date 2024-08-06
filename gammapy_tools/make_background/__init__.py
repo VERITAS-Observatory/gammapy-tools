@@ -8,4 +8,6 @@ __all__ = [
     "Background3DModelEstimator",
     "prepare_dataset",
     "get_background_for_run",
+    "write_index_files",
+    "generate_background_from_run",
 ]
