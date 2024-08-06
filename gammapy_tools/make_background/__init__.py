@@ -1,5 +1,5 @@
 from .background_models import BackgroundModelEstimator, Background3DModelEstimator
-from .make_background import run_make_background, get_background_for_run
+from .make_background import run_make_background, get_background_for_run,generate_background_from_run,write_index_files
 from .prepare_data import prepare_dataset
 
 __all__ = [
