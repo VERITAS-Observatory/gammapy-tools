@@ -39,6 +39,7 @@ dependencies = [
     "PyYAML",
     "regions",
     "tqdm",
+    "ray[default]",
 ]
 
 [project.optional-dependencies]

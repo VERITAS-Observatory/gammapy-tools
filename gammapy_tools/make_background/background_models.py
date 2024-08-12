@@ -2,7 +2,9 @@ from copy import deepcopy
 
 import numpy as np
 from scipy.ndimage import gaussian_filter
-from multiprocess import Pool
+# from multiprocess import Pool
+import ray
+from ray import Pool
 
 # Astropy stuff
 
@@ -51,7 +53,8 @@ class BackgroundModelEstimator:
             None
 
         """
-
+        
+        ray.init()
         self.njobs = njobs
         self.counts = self._make_bkg2d(energy, offset, unit="")
         self.exposure = self._make_bkg2d(energy, offset, unit="s TeV sr")

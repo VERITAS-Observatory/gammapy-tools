@@ -6,7 +6,10 @@ services:
       dockerfile: Dockerfile
     ports:
       # Modify port as needed
+      # Jupyter runs on 8888
       - "8888:8888"
+      # Ray dashboard runs on 8265 
+      - "8265:8265"
     environment:
       - JUPYTER_TOKEN=letmein
     volumes:
