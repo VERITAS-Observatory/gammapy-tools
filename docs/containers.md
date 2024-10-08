@@ -91,3 +91,54 @@ Finally, you can start an interactive shell using:
 ```
 singularity/apptainer shell -B /path/to/my/data:/local_data gammapy-tools.sif
 ```
+
+## Containerized Jupyter Kernel
+
+One can used a containerized Jupyter kernel through one's own python environment, regardless of the setup (venv, poetry, conda, mamba, etc). The benifit of this method is that all the python code is evaluated in a reproducable containerized environment, without needing to worry about file permission, mounts/binds, networking or any other boundries of when using Docker or Apptainer/Singularity. 
+
+To do this you need either Docker or Apptainer/Singularity installed and a working python install with ipykernel installed.
+First make sure you've build either the Docker or Apptainer/Singularity image using the instructions above. 
+Next create a new custom kernel:
+```
+python -m ipykernel install --user --name gammapy-kernel --display-name="gammapy-kernel"
+```
+This will create a new directory (for example):
+```
+Installed kernelspec custom-kernel in /home/obriens/.local/share/jupyter/kernels/gammapy-kernel
+```
+Navigate to the `/home/obriens/.local/share/jupyter/kernels/gammapy-kernel/` (correcting for your own install) and replace the `kernel.json` file with the `kernel.json` [file from this repository ](../kernel.json):
+```
+{
+ "argv": [
+     "/path/to/launch_kernel.sh",
+     "{connection_file}"
+ ],
+ "display_name": "gammapy-kernel",
+ "language": "python",
+ "metadata": {
+  "debugger": true
+ }
+}
+```
+Replace:
+```
+     "/path/to/launch_kernel.sh",
+```
+With the path to the `launch_kernel_apptainer.sh` or  `launch_kernel_docker.sh` file from this repository. 
+Make the `launch_kernel_apptainer.sh` or `launch_kernel_docker.sh` script executable, for example:
+```
+chmod +x launch_kernel_apptainer.sh 
+```
+Export the environmental variable `GAMMAPY_KERNEL_IMAGE` to:
+```
+export GAMMAPY_KERNEL_IMAGE=/path/to/gammapy-tools.sif
+```
+for Apptainer/Singularity, or
+```
+export GAMMAPY_KERNEL_IMAGE="docker_username/gammapy_tools:latest"
+```
+for Docker.
+
+Launch a Jupyter instances as you normally do from any envrionment. When creating a new notebook you'll now see the option to use the containerized `gammapy-kernel`.
+
+For a detailed explaination, see [this post](https://www.physics.mcgill.ca/~obriens/Tutorials/containerized_kernels/).
