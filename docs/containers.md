@@ -137,7 +137,11 @@ for Apptainer/Singularity, or
 ```
 export GAMMAPY_KERNEL_IMAGE="docker_username/gammapy_tools:latest"
 ```
-for Docker.
+for Docker. Additionally for Docker, you must set the `GAMMAPY_WORK_DIR` environmental variable:
+```
+export GAMMAPY_WORK_DIR=/path/to/working/directory
+```
+This is needed for Docker, as, by default, no directories will be mounted within the container. Whereas Apptainer/Singularity will, by default (unless your sysadmin installed it differently), will have access to [a set of commonly used directories](https://apptainer.org/docs/user/main/bind_paths_and_mounts.html#system-defined-bind-paths). If you're using a location not bound by default, then you'll also need to set the `GAMMAPY_WORK_DIR` environmental variable when working with Apptainer/Singularity.
 
 Launch a Jupyter instances as you normally do from any envrionment. When creating a new notebook you'll now see the option to use the containerized `gammapy-kernel`.
 

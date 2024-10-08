@@ -11,7 +11,7 @@ else
     # if it isn't start an instance
     echo "Starting the server"
     # Bind the runtime-dir (where the connection files are) to /connections within the container
-    apptainer instance start --bind `jupyter --runtime-dir`:/connections $image_name $container_name
+    apptainer instance start --bind $GAMMAPY_WORK_DIR:$GAMMAPY_WORK_DIR --bind `jupyter --runtime-dir`:/connections $image_name $container_name
 fi
 
 # Attach and run ipykernel_laucher

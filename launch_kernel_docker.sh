@@ -18,7 +18,7 @@ else
     docker rm $container_name
     # Create a new container
     # Add it to the host network and mounting the connection_path
-    docker create --name=$container_name -v  $connection_path:/connections --network=host  $image_name
+    docker create --name=$container_name -v $GAMMAPY_WORK_DIR:$GAMMAPY_WORK_DIR -v  $connection_path:/connections --network=host  $image_name
     # Start this server instance
     docker start  $container_name
 fi
