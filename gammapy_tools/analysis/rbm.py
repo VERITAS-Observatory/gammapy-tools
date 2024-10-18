@@ -136,8 +136,8 @@ def rbm_analysis(
         skydir=(source_pos.ra.value, source_pos.dec.value),
         binsz=config["sky_map"]["bin_sz"],
         width=(map_deg, map_deg),
-        frame="icrs",
-        proj="CAR",
+        frame="fk5",
+        proj="TAN",
         axes=[energy_axis],
     )
     geom_image = geom.to_image().to_cube([energy_axis.squash()])
