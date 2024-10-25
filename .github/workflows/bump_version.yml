@@ -4,7 +4,8 @@ on:
   push:
     branches:
     # disabling it for now
-      - _main
+      - main
+      - *_rc
 
 jobs:
   bump_version:

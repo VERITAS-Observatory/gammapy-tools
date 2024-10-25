@@ -1,0 +1,11 @@
+{
+ "argv": [
+     "/path/to/launch_kernel.sh",
+     "{connection_file}"
+ ],
+ "display_name": "gammapy-kernel",
+ "language": "python",
+ "metadata": {
+  "debugger": true
+ }
+}

@@ -2,11 +2,12 @@ import logging
 import yaml
 import numpy as np
 from scipy.stats import norm
-from IPython.display import display
 import os
 from astropy.io import fits
 from os import environ
 from astropy.table import Table
+from scipy.optimize import fsolve
+from typing import Optional, Tuple
 
 # %matplotlib inline
 import astropy.units as u
@@ -19,16 +20,55 @@ from gammapy.analysis import Analysis, AnalysisConfig
 from gammapy.datasets import MapDatasetOnOff
 from gammapy.estimators import ExcessMapEstimator
 from gammapy.makers import RingBackgroundMaker
-from gammapy.data import DataStore
+from gammapy.maps.wcs.ndmap import WcsNDMap
+from gammapy.modeling.models import SpectralModel
 
-from gammapy.modeling.models import PowerLawSpectralModel
+# importing package version
+from .._version import __version__ as gpt_version
 
-from astroquery.simbad import Simbad
+__notebook_version__ = "0.2"
 
 log = logging.getLogger(__name__)
 
 
-def rbm_analysis(config):
+def estimate_alpha(S: float, N_on: float, N_off: float) -> float:
+    """
+    Numerically estimates alpha from significance, ON counts, and OFF counts
+
+    Parameters
+    ----------
+        S: significance
+        N_on: on counts
+        N_off: off counts*alpha
+
+    Returns
+    ----------
+        alpha: estimated alpha
+    """
+
+    # Define the function to find the root of
+    def equation(alpha):
+        return (
+            np.sqrt(2)
+            * np.sqrt(
+                N_on * np.log((1 + alpha) / alpha * (N_on / (N_on + (N_off / alpha))))
+                + (N_off / alpha)
+                * np.log((1 + alpha) * ((N_off / alpha) / (N_on + (N_off / alpha))))
+            )
+            - S
+        )
+
+    # Initial guess for alpha
+    alpha_initial_guess = 1e-2
+
+    # Solve for alpha
+    alpha_solution = fsolve(equation, alpha_initial_guess)
+    return alpha_solution[0]
+
+
+def rbm_analysis(
+    config: dict,
+) -> Tuple[float, float, float, float, np.ndarray, float, np.ndarray, np.ndarray]:
     """
     Performs a basic RBM analysis
 
@@ -55,16 +95,21 @@ def rbm_analysis(config):
     source_config = AnalysisConfig()
     source_config.datasets.type = "3d"
     source_config.observations.datastore = data_store
-    
-    #select only observations from runlist, if specified
+    # select only observations from runlist, if specified
     if config["io"]["from_runlist"]:
-        source_config.observations.obs_ids = np.genfromtxt(config["io"]["runlist"],unpack=True).tolist()
-    
+        source_config.observations.obs_ids = np.genfromtxt(
+            config["io"]["runlist"], unpack=True
+        ).tolist()
+
     if config["run_selection"]["pos_from_DL3"]:
-        #get RA and DEC from first run
-        hdul = fits.open(config["io"]["out_dir"]+os.listdir(config["io"]["out_dir"])[0])
-        source_pos = SkyCoord(hdul[1].header["RA_OBJ"]*u.deg, hdul[1].header["DEC_OBJ"]*u.deg)
-    
+        # get RA and DEC from first run
+        hdul = fits.open(
+            config["io"]["out_dir"] + os.listdir(config["io"]["out_dir"])[0]
+        )
+        source_pos = SkyCoord(
+            hdul[1].header["RA_OBJ"] * u.deg, hdul[1].header["DEC_OBJ"] * u.deg
+        )
+
     else:
         source_pos = SkyCoord(
             config["run_selection"]["source_ra"],
@@ -72,7 +117,7 @@ def rbm_analysis(config):
             frame="icrs",
             unit="deg",
         )
-    
+
     source_config.datasets.geom.wcs.skydir = {
         "lon": source_pos.ra,
         "lat": source_pos.dec,
@@ -92,17 +137,26 @@ def rbm_analysis(config):
     source_config.datasets.geom.selection.offset_max = map_deg * u.deg
 
     # We now fix the energy axis for the counts map - (the reconstructed energy binning)
-    source_config.datasets.geom.axes.energy.min = str(config["sky_map"]["e_min"])+" TeV"
-    source_config.datasets.geom.axes.energy.max = str(config["sky_map"]["e_max"])+" TeV"
+    source_config.datasets.geom.axes.energy.min = (
+        str(config["sky_map"]["e_min"]) + " TeV"
+    )
+    source_config.datasets.geom.axes.energy.max = (
+        str(config["sky_map"]["e_max"]) + " TeV"
+    )
     source_config.datasets.geom.axes.energy.nbins = 30
 
-    source_config.excess_map.correlation_radius = str(config["sky_map"]["theta"]) +  " deg"
-    
+    source_config.excess_map.correlation_radius = (
+        str(config["sky_map"]["theta"]) + " deg"
+    )
+
     # We need to extract the ring for each observation separately, hence, no stacking at this stage
     source_config.datasets.stack = False
 
-    source_config.datasets.safe_mask.parameters = {'aeff_percent':config["sky_map"]["aeff_max_percent"], 'offset_max':config["sky_map"]["offset_max"]*u.deg}
-    source_config.datasets.safe_mask.methods = ['aeff-max','offset-max']
+    source_config.datasets.safe_mask.parameters = {
+        "aeff_percent": config["sky_map"]["aeff_max_percent"],
+        "offset_max": config["sky_map"]["offset_max"] * u.deg,
+    }
+    source_config.datasets.safe_mask.methods = ["aeff-max", "offset-max"]
 
     analysis = Analysis(source_config)
 
@@ -113,14 +167,14 @@ def rbm_analysis(config):
     analysis.get_observations()
     analysis.get_datasets()
 
-    #simbad = Simbad()
-    #simbad.reset_votable_fields()
-    #simbad.add_votable_fields("ra", "dec", "flux(B)", "flux(V)", "jp11")
-    #simbad.remove_votable_fields("coordinates")
+    # simbad = Simbad()
+    # simbad.reset_votable_fields()
+    # simbad.add_votable_fields("ra", "dec", "flux(B)", "flux(V)", "jp11")
+    # simbad.remove_votable_fields("coordinates")
 
-    #srcs_tab = simbad.query_region(source_pos, radius=1.5 * u.deg)
-    #srcs_tab = srcs_tab[srcs_tab["FLUX_B"] < config["sky_map"]["min_star_brightness"]]
-    #srcs_tab = srcs_tab[srcs_tab["FLUX_V"] != np.ma.masked]
+    # srcs_tab = simbad.query_region(source_pos, radius=1.5 * u.deg)
+    # srcs_tab = srcs_tab[srcs_tab["FLUX_B"] < config["sky_map"]["min_star_brightness"]]
+    # srcs_tab = srcs_tab[srcs_tab["FLUX_V"] != np.ma.masked]
 
     # get the geom that we use
     geom = analysis.datasets[0].counts.geom
@@ -142,7 +196,7 @@ def rbm_analysis(config):
                     radius=radius * u.deg,
                 )
             )
-    
+
     star_data = np.loadtxt(
         # environ["GAMMAPY_DATA"] + "/catalogs/Hipparcos_MAG8_1997.dat", usecols=(0, 1, 2, 3, 4)
         environ["GAMMAPY_DATA"] + "/catalogs/Hipparcos_MAG8_1997.dat",
@@ -194,44 +248,47 @@ def rbm_analysis(config):
         dataset_on_off = ring_maker.run(dataset.to_image())
         stacked_on_off.stack(dataset_on_off)
 
-    # we'll convert our map dataset into a spectrum dataset,
-    # which is more helpful for extracting info
+    # spectral model for estimator
+    # amp, idx = config["spectrum"]["params"]
+    # spectral_model = PowerLawSpectralModel(
+    #    amplitude=float(amp) * u.Unit("cm-2 s-1 TeV-1"),
+    #    index=float(idx),
+    #    reference=1 * u.TeV,
+    # )
+
     output_dataset = stacked_on_off.to_spectrum_dataset(
         CircleSkyRegion(center=source_pos, radius=config["sky_map"]["theta"] * u.deg),
         containment_correction=True,
     )
     output_dict = output_dataset.info_dict()
 
-    # spectral model for estimator
-    amp, idx = config["spectrum"]["params"]
-    spectral_model = PowerLawSpectralModel(
-        amplitude=float(amp) * u.Unit("cm-2 s-1 TeV-1"),
-        index=float(idx),
-        reference=1 * u.TeV,
-    )
-
     estimator = ExcessMapEstimator(
         config["sky_map"]["theta"] * u.deg,
-        selection_optional=["all"],
-        spectral_model=spectral_model,
+        selection_optional=[],
+        # spectral_model=spectral_model,
+        correlate_off=False,
     )
     lima_maps = estimator.run(stacked_on_off)
     significance_map = lima_maps["sqrt_ts"]
     excess_map = lima_maps["npred_excess"]
 
-    counts = output_dict["counts"]
-    excess = output_dict["excess"]
-    background = output_dict["background"]
-    alpha = output_dict["alpha"]
-    sigma = output_dict["sqrt_ts"]
+    counts = lima_maps["npred"].get_by_coord(
+        [source_pos.ra, source_pos.dec, 1 * u.TeV]
+    )[0]
+    background = lima_maps["npred_background"].get_by_coord(
+        [source_pos.ra, source_pos.dec, 1 * u.TeV]
+    )[0]
+    sigma = lima_maps["sqrt_ts"].get_by_coord(
+        [source_pos.ra, source_pos.dec, 1 * u.TeV]
+    )[0]
+    alpha = estimate_alpha(sigma, counts, background)
     exposure = output_dict["ontime"]
 
-    #significance_map_off = significance_map * exclusion_mask
-    #significance_map_off = significance_map[exclusion_mask]
+    # significance_map_off = significance_map * exclusion_mask
+    # significance_map_off = significance_map[exclusion_mask]
 
     return (
         counts,
-        excess,
         background,
         alpha,
         sigma,
@@ -243,16 +300,16 @@ def rbm_analysis(config):
 
 
 def rbm_plots(
-    config,
-    spectral_points,
-    excess_map,
-    significance_map,
-    c_sig,
-    c_time,
-    exclusion_mask,
-    save=True,
-    plot=True,
-):
+    config: dict,
+    spectral_points: Table,
+    excess_map: WcsNDMap,
+    significance_map: WcsNDMap,
+    c_sig: np.ndarray,
+    c_time: np.ndarray,
+    exclusion_mask: WcsNDMap,
+    save: Optional[bool] = True,
+    plot: Optional[bool] = True,
+) -> None:
     """
     Makes + optionally saves significance/excess maps,
     significance distribution, and cumulative significance
@@ -285,12 +342,15 @@ def rbm_plots(
         config["plot_names"] + "sig_excess.png", format="png", bbox_inches="tight"
     )
     plt.show()
-    
-    significance_map_off = significance_map * exclusion_mask
 
-    # significance distribution
-    significance_all = significance_map.data[np.isfinite(significance_map.data)]
-    significance_off = significance_map_off.data[np.isfinite(significance_map_off.data)]
+    # create a 2D mask for the images
+    # significance_map_off = significance_map * exclusion_mask
+    significance_all = significance_map.data[
+        np.isfinite(significance_map.data)
+    ].flatten()
+    significance_off = significance_map.data[
+        exclusion_mask & np.isfinite(significance_map.data)
+    ].flatten()
 
     fig, ax = plt.subplots()
     ax.hist(
@@ -299,37 +359,33 @@ def rbm_plots(
         alpha=0.5,
         color="red",
         label="all bins",
-        bins=np.linspace(-5,10,50),
+        bins=np.linspace(-5, 10, 100),
     )
 
     ax.hist(
-        significance_off[exclusion_mask.data.flatten()],
+        significance_off,
         density=True,
         alpha=0.5,
         color="blue",
         label="off bins",
-        bins=np.linspace(-5,10,50),
+        bins=np.linspace(-5, 10, 100),
     )
 
     # Now, fit the off distribution with a Gaussian
     mu, std = norm.fit(significance_off)
-    x = np.linspace(-8, 8, 50)
+    x = np.linspace(-10, 10, 100)
     p = norm.pdf(x, mu, std)
     ax.plot(x, p, lw=2, color="black")
     ax.legend()
     ax.set_xlabel("Significance")
     ax.set_yscale("log")
     ax.set_ylim(1e-5, 1)
+    # unused values
     # xmin, xmax = np.min(significance_all), np.max(significance_all)
     ax.set_xlim(-5, 10)
 
     print(f"Fit results: mu = {mu:.2f}, std = {std:.2f}")
     ax.text(-4.5, 0.5, f"Fit results: mu = {mu:.2f}, std = {std:.2f}")
-    plt.savefig(
-        config["io"]["results_dir"] + config["plot_names"] + "sig_dist.png",
-        format="png",
-        bbox_inches="tight",
-    )
     if plot:
         plt.show()
     else:
@@ -363,12 +419,20 @@ def rbm_plots(
 
 
 def write_validation_info(
-    config, spectral_model, flux, flux_err,  counts, background, alpha, sigma, exposure
-):
+    config: dict,
+    spectral_model: SpectralModel,
+    flux: float,
+    flux_err: float,
+    counts: float,
+    background: float,
+    alpha: float,
+    sigma: float,
+    exposure: float,
+) -> None:
 
     if not os.path.exists(config["io"]["results_dir"]):
         os.makedirs(config["io"]["results_dir"])
-        
+
     spectab = spectral_model.to_parameters_table()
     index = spectab["value"][0]
     index_err = spectab["error"][0]
@@ -376,12 +440,13 @@ def write_validation_info(
     norm_err = spectab["error"][1]
 
     output_dict = {
-        "analysis notebook version": 1.0,
+        "analysis notebook version": __notebook_version__,
+        "gammapy-tools version": gpt_version,
         "source": config["run_selection"]["source_name"],
         "gammapy version": gammapy.__version__,
-        "exposure": float(exposure.value) / 60,
+        "exposure (min)": float(exposure.value) / 60,
         "on": int(counts),
-        "off": int(background),
+        "off": f"{background:.2f}",
         "alpha": f"{alpha:.3e}",
         "significance": f"{sigma:.2f}",
         "flux": f"{flux:.2e}",
