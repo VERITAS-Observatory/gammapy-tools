@@ -131,12 +131,18 @@ def get_background_for_run(parms: tuple[float, dict]) -> tuple[str, list]:
         if "smooth_sigma" in config["background_selection"]:
             smooth_sigma = config["background_selection"]["smooth_sigma"]
 
+        default_exclusion = None 
+        if "sky_map" in config:
+            if "on_exclusion_region" in config["sky_map"]:
+                default_exclusion = config["sky_map"]["on_exclusion_region"]
+        
         estimator = BackgroundModelEstimator(
             energy,
             offset,
             smooth=config["background_selection"]["smooth"],
             smooth_sigma=smooth_sigma,
             njobs=config["config"]["njobs"],
+            default_exclusion=default_exclusion,
         )
 
         estimator.run(observations)
@@ -213,8 +219,16 @@ def generate_background_from_run(parms: tuple[int, dict]) -> str:
             name="offset",
         )
 
+        default_exclusion = None 
+        if "sky_map" in config:
+            if "on_exclusion_region" in config["sky_map"]:
+                default_exclusion = config["sky_map"]["on_exclusion_region"]
+
+        
         estimator = BackgroundModelEstimator(
-            energy, offset, smooth=config["background_selection"]["smooth"]
+            energy, offset, 
+            smooth=config["background_selection"]["smooth"],
+            default_exclusion=default_exclusion,
         )
         estimator.run(observations)
         if "BACKGROUND" in hdul:

@@ -17,6 +17,7 @@ from gammapy.data import Observation
 # from here
 from ..utils import ExclusionFinder
 
+from typing import Optional
 
 class BackgroundModelEstimator:
     """
@@ -33,6 +34,7 @@ class BackgroundModelEstimator:
         excluded_sources: list = [],
         smooth_sigma: float = 1,
         njobs: int = 0,
+        default_exclusion: Optional[float] = None,
     ) -> None:
         """BackgroundModelEstimator class for estimating the background from runs
 
@@ -45,6 +47,8 @@ class BackgroundModelEstimator:
             excluded_sources (list)             - list of sources to be excluded
                                                  (astropy.coordinates.Skycoords)
             njobs (int)                         - Number of jobs to run
+            default_exclusion (float)           - Default exclusion radius for sources. Defaults to None
+                                                 which will use the exclusion finder to determine the exclusion radius
 
         Returns
         ----------
@@ -85,7 +89,7 @@ class BackgroundModelEstimator:
         # )
         # self.hawc = SourceCatalog3HWC("$GAMMAPY_DATA/catalogs/3HWC.ecsv")
 
-        self.exclusion = ExclusionFinder()
+        self.exclusion = ExclusionFinder(default_exclusion = default_exclusion)
 
     @staticmethod
     def _make_bkg2d(energy: MapAxis, offset: MapAxis, unit: str) -> Background2D:
