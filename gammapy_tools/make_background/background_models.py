@@ -389,7 +389,7 @@ class Background3DModelEstimator:
             rate = smooth(rate, sigma=self.smooth_sigma)
         return rate
 
-def smooth(bkg, method='poly'):
+def smooth(bkg, method='poly',sigma=1):
     """Smooths background rates from BackgroundModelEstimator.background_rate (bkg input)
 
 
