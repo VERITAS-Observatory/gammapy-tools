@@ -8,10 +8,12 @@ from multiprocess import Pool
 
 
 # Gammapy stuff
+import gammapy
 from gammapy.irf import Background2D,Background3D
 from gammapy.maps import MapAxis
 from gammapy.data import Observation
 from gammapy.datasets import MapDatasetEventSampler, Datasets, MapDatasetOnOff
+from scipy.interpolate import splrep, splev
 
 # from gammapy.catalog import SourceCatalog3HWC, SourceCatalogGammaCat
 
@@ -387,22 +389,54 @@ class Background3DModelEstimator:
             rate = smooth(rate, sigma=self.smooth_sigma)
         return rate
 
-def smooth(bkg: Background2D, sigma: float = 1.0) -> Background2D:
+def smooth(bkg, method='poly'):
     """Smooths background rates from BackgroundModelEstimator.background_rate (bkg input)
 
 
     Parameters
     ----------
         bkg (Background2D)                      - 2D background to be smoothed
-        sigma (float)                           - sigma of the gaussian for smoothing
+        method (str)                            - Method for smoothing:
+                                                    "poly": 5th deg polynomial fit (same as ED) [default]
+                                                    "spline": 10 d.o.f. cubic spline fit
+                                                    "gauss": gaussian kernel smoothing
 
     Returns
     ----------
         bkg (Background2D)                      - Smoothed 2D background
 
     """
-    bkg_3d = bkg.to_3d()
-    for i in range(len(bkg_3d.data)):
-        smoothed = gaussian_filter(bkg_3d.data[i, :, :], sigma, 0)
-        bkg_3d.data[i, :, :] = smoothed
-    return bkg_3d.to_2d()
+   
+    if method == 'poly':
+        offset = bkg.axes['offset'].center.value
+        for i in range(len(bkg.data)):
+            poly = np.polyfit(offset,bkg.data[i,:],deg=5)
+            p = np.poly1d(poly)
+            bkg.data[i,:] = p(offset)
+    elif method == 'spline':
+        offset = bkg.axes['offset'].center.value
+        smooth_offset = np.linspace(offset[0],offset[-1],10)
+        for i in range(len(bkg.data)):
+            spline = splrep(offset,bkg.data[i,:],deg=5)
+            fit = splev(smooth_offset,spline)
+            bkg.data[i,:] = fit(offset)
+    elif method == 'gauss':
+        if type(bkg) == gammapy.irf.background.Background2D:
+            bkg = bkg.to_3d()
+        else: bkg_3d = bkg
+        for i in range(len(bkg.data)):
+            data = bkg.data[i, :, :]
+            padded_data = np.pad(data,10)
+            window1d = np.abs(np.blackman(len(padded_data)))
+            window2d = np.sqrt(np.outer(window1d,window1d))
+            windowed = padded_data * window2d
+            gauss = Gaussian2DKernel(sigma,sigma,x_size=np.shape(windowed)[0],y_size=np.shape(windowed)[1])
+
+            conv = convolve_fft(data,gauss,normalize_kernel=False,fft_pad=True,preserve_nan=True)
+            bkg.data[i, :, :] = conv
+
+        if type(bkg) == gammapy.irf.background.Background2D:
+            return bkg.to_2d()
+        else: return bkg
+
+    return bkg
