@@ -5,7 +5,8 @@ from multiprocessing import Pool
 import numpy as np
 import yaml
 from os import listdir
-from os.path import isfile, join, getsize
+from os.path import isfile, join
+
 # Astropy
 from astropy.io import fits
 from gammapy.data import DataStore
@@ -130,12 +131,18 @@ def get_background_for_run(parms: tuple[float, dict]) -> tuple[str, list]:
         if "smooth_sigma" in config["background_selection"]:
             smooth_sigma = config["background_selection"]["smooth_sigma"]
 
+        default_exclusion = None 
+        if "sky_map" in config:
+            if "on_exclusion_region" in config["sky_map"]:
+                default_exclusion = config["sky_map"]["on_exclusion_region"]
+        
         estimator = BackgroundModelEstimator(
             energy,
             offset,
             smooth=config["background_selection"]["smooth"],
             smooth_sigma=smooth_sigma,
             njobs=config["config"]["njobs"],
+            default_exclusion=default_exclusion,
         )
 
         estimator.run(observations)
@@ -212,8 +219,16 @@ def generate_background_from_run(parms: tuple[int, dict]) -> str:
             name="offset",
         )
 
+        default_exclusion = None 
+        if "sky_map" in config:
+            if "on_exclusion_region" in config["sky_map"]:
+                default_exclusion = config["sky_map"]["on_exclusion_region"]
+
+        
         estimator = BackgroundModelEstimator(
-            energy, offset, smooth=config["background_selection"]["smooth"]
+            energy, offset, 
+            smooth=config["background_selection"]["smooth"],
+            default_exclusion=default_exclusion,
         )
         estimator.run(observations)
         if "BACKGROUND" in hdul:
@@ -418,11 +433,26 @@ def run_make_background(config: dict) -> dict:
 
     return config
 
+
 def write_index_files(config):
     dl3_dir = config["io"]["out_dir"]
-    dl3Files = [dl3_dir + f for f in listdir(dl3_dir) if isfile(join(dl3_dir, f)) and (f.endswith(".fits") or (f.endswith(".fits.gz") and not f.startswith("obs") and not f.startswith("hdu"))) and (f.strip('.anasum.fits') )]
-    create_obs_hdu_index_file(dl3Files,index_file_dir=dl3_dir)
+    dl3Files = [
+        dl3_dir + f
+        for f in listdir(dl3_dir)
+        if isfile(join(dl3_dir, f))
+        and (
+            f.endswith(".fits")
+            or (
+                f.endswith(".fits.gz")
+                and not f.startswith("obs")
+                and not f.startswith("hdu")
+            )
+        )
+        and (f.strip(".anasum.fits"))
+    ]
+    create_obs_hdu_index_file(dl3Files, index_file_dir=dl3_dir)
     return
+
 
 if __name__ == "__main__":
     with open(sys.argv[1], "r") as f:

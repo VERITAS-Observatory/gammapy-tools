@@ -3,6 +3,7 @@
 TYPE_CHECKING = False
 if TYPE_CHECKING:
     from typing import Tuple, Union
+
     VERSION_TUPLE = Tuple[Union[int, str], ...]
 else:
     VERSION_TUPLE = object
@@ -12,5 +13,10 @@ __version__: str
 __version_tuple__: VERSION_TUPLE
 version_tuple: VERSION_TUPLE
 
+<<<<<<< HEAD:gammapy_tools/_version.py
 __version__ = version = '1.0.1.dev0+g6c24bc9.d20241006'
 __version_tuple__ = version_tuple = (1, 0, 1, 'dev0', 'g6c24bc9.d20241006')
+=======
+__version__ = version = "1.0.1.dev13+gab1209a.d20240527"
+__version_tuple__ = version_tuple = (1, 0, 1, "dev13", "gab1209a.d20240527")
+>>>>>>> c6ba6ab1f2ec07c668ac196ed51f06795371aeab:gammapy_tools/__version__.py

@@ -4,17 +4,24 @@ import numpy as np
 from gammapy.catalog import SourceCatalog3HWC, SourceCatalogGammaCat
 
 
+from typing import Optional
+
 class ExclusionFinder:
     """
     Class for finding exclusion regions for the analysis
 
     """
 
-    def __init__(self):
+    def __init__(self, default_exclusion: Optional[float] = 0.35):
         """Initilization function
 
         Load in the star catalog, GammaCat and 3HWC
+
+        Parameters
+        ----------
+            default_exclusion (float)          - Default theta cut to use for exclusion region
         """
+        self.default_exclusion = default_exclusion
 
         # ToDo wrap all this into package info
         this_dir, _ = path.split(__file__)
@@ -141,8 +148,9 @@ class ExclusionFinder:
         ra: float,
         dec: float,
         theta: float = 2.0,
-        theta_cut: float = 0.35,
+        theta_cut: Optional[float] = None,
         mag_cut: float = 7,
+        star_theta_cut: float = 0.35,
     ) -> tuple[list[tuple[float, float, float]], list[str]]:
         """Find sources to exclude
 
@@ -153,10 +161,11 @@ class ExclusionFinder:
             theta (float)                       - Search radius (in degrees)
                                                   Defaults to 2.0
             theta_cut (float)                   - Default theta cut to use for exclusion region
-                                                  Defaults to 0.35
+                                                  Defaults to 0.35 or the default_exclusion
             mag_cut (float)                     - B Magnitude cut on star brightness
                                                   Defaults to mag 7
-
+            star_theta_cut (float)              - Theta cut for stars
+                                                  Defaults to 0.35
 
         Returns
         ----------
@@ -167,10 +176,13 @@ class ExclusionFinder:
         regions = []
         sources_excluded = []
 
+        if theta_cut is None:
+            theta_cut = self.default_exclusion
+
         # Get the stars in the region
         stars = self.find_stars(ra, dec, theta, mag_cut)
         for star in stars:
-            regions.append((star["ra"], star["dec"], theta_cut))
+            regions.append((star["ra"], star["dec"], star_theta_cut))
             sources_excluded.append(f"star_{star['id']:0.0f}")
 
         # Find the HAWC sources
