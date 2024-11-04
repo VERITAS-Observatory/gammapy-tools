@@ -14,6 +14,7 @@ config = """io:
     from_run : false
     # Whether or not to analyze runs from a runlist or all runs in the results_dir
     from_runlist: true
+    3d_bkg: false
 
 binning:
     # Energy binning for bkg generation

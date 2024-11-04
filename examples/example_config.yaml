@@ -11,9 +11,9 @@ io:
     results_dir: "/raid/romulus/swong/mydl3/crabtest/results/"
 
     # Whether or not to generate the background from the run
-    from_run : false
+    from_run : true
     # Whether or not to analyze runs from a runlist or all runs in the results_dir
-    from_runlist: true
+    from_runlist: false
 
 binning:
     # Energy binning for bkg generation
@@ -23,7 +23,7 @@ binning:
     # Offset/wobble binning for bkg generation
     off_min: 0
     off_max: 2.5
-    off_bins: 5
+    off_bins: 20
 
 config: 
     # Number of cores to be used for parallel bkg generation
@@ -37,7 +37,6 @@ exclusion:
     exclude_source_name : 
     # Exculde region around a given ra, dec
     exclude_regions :
-    # Exculde region around a given ra, dec
     # Exculde region around a given ra, dec
     # exclude_source_pos : [ ("287.10 deg", "6.39 deg", "0.5 deg"]
     # Exculde entire run within a distance to a given ra/dec
@@ -75,8 +74,8 @@ run_selection:
     # Whether to get source position from the DL3 header
     pos_from_DL3: true
     # If pos_from_DL3 is set to false, provide source coordinates in deg
-    source_ra: 253.4675000
-    source_dec: 39.7602778
+    source_ra: 83.633114
+    source_dec: 22.014487
     # Maximum offset in deg to select data from
     offset_max : 3.5
     # Minimum number of telescopes to select as valid runs
@@ -85,6 +84,8 @@ run_selection:
     el_min : 30
     
 spectrum : 
+    # How the spectral analysis should be done - "RE" for reflected regions, "FoV" for field of view background (extended)
+    analysis_type: "RE"
     # Energy threshold for spectral/integral flux calculations
     e_min : 0.2
     # Maximum energy for spectral/integral flux calculations
@@ -97,25 +98,17 @@ spectrum :
     # Assumes normalization is in units of TeV^-1 cm^-2 s^-1
     params : [3.45e-11,2.6]
     
-lightcurve:
-    #light curve bin size in minutes
-    bin_size_min: 1000
-    
 sky_map:
     # Energy threshold for events to be included in the sky map (TeV)
     e_min: 0.01
     # Maximum energy for sky map (TeV)
     e_max: 100
-    # Number of energy bins for the sky map
-    n_bins: 30
     # Sky map size (deg)
     map_deg: 5
     # Sky map binning (deg) - ED default is 0.01, VEGAS is 0.02
     # Larger bins run faster
     bin_sz: 0.01
     offset_max: 1.75
-    # Safe energy threshold (as a %) for effective area - ED doesn't use this, so it's set fairly small
-    aeff_max_percent: 0.1
     #exclusion regions are lists of lists of [[SkyCoord, radius], [SkyCoord, radius], ...]
     exclusion_regions: []
     #theta defines the ON region size (deg)
@@ -123,12 +116,12 @@ sky_map:
     #exclusion region around the source (deg)
     on_exclusion_region: 0.35
     #RBM parameters
-    ring_rin: "0.6 deg"
-    ring_width: "0.133333 deg"
+    ring_rin: "0.53 deg"
+    ring_width: "0.14 deg"
     #whether or not to truncate the skymap colourbar at +/- 5 sigma
     truncate: true
     #dimmest visual magnitude for stars to be excluded
-    min_star_brightness: 8
+    min_star_brightness: 6
 
 #where to save outputs    
 results_file: 'crab_test_results.yaml'
