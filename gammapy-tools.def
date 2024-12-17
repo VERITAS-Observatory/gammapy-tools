@@ -15,8 +15,7 @@ Stage: build
 %environment
     # Port for jupyter lab
     export JPORT=8000
-    export GAMMAPY_DATA=/gamma-tools/gammapy-datasets/1.2/
-    export GAMMAPY_DATA=/gamma-tools/gammapy-datasets/dev
+    export GAMMAPY_DATA=/gamma-tools/gammapy-datasets/1.3/
     #. "/opt/conda/etc/profile.d/conda.sh"
     #. /opt/conda/bin/activate 
     #export PATH=/opt/conda/bin/:$PATH
@@ -42,7 +41,7 @@ Stage: build
     
     # Install v2dl3
     cd /gamma-tools
-    git clone https://github.com/VERITAS-Observatory/V2DL3.git
+    git clone  --depth 1 --branch v0.6.0 https://github.com/VERITAS-Observatory/V2DL3.git 
     cd /gamma-tools/V2DL3
 
     # Because its an env install of requirements
@@ -68,9 +67,6 @@ Stage: build
     #mamba clean -a --yes   
     python -m pip cache purge
 
-
-    # Add the updated version of gammapy/datasets/map.py
-    wget https://raw.githubusercontent.com/gammapy/gammapy/main/gammapy/datasets/map.py -O /opt/gammapy_tools/lib/python3.12/site-packages/gammapy/datasets/map.py
 
 %runscript
     cd /local_data ; jupyter-lab --port=$JPORT
