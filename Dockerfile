@@ -1,7 +1,7 @@
 FROM jupyter/minimal-notebook AS base
 
 # Install gammapy
-RUN mamba install gcc jupyterlab "gammapy==1.2" ipykernel --yes
+RUN mamba install gcc jupyterlab "gammapy==1.3" ipykernel --yes
 WORKDIR /gammapy-tools
 
 

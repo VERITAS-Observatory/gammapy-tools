@@ -1,7 +1,6 @@
 from copy import deepcopy
 
 import numpy as np
-from scipy.ndimage import gaussian_filter
 from multiprocess import Pool
 
 # Astropy stuff
@@ -9,11 +8,12 @@ from multiprocess import Pool
 
 # Gammapy stuff
 import gammapy
-from gammapy.irf import Background2D,Background3D
+from gammapy.irf import Background2D, Background3D
 from gammapy.maps import MapAxis
 from gammapy.data import Observation
-from gammapy.datasets import MapDatasetEventSampler, Datasets, MapDatasetOnOff
+from gammapy.datasets import MapDatasetEventSampler
 from scipy.interpolate import splrep, splev
+from astropy.convolution import Gaussian2DKernel, convolve_fft
 
 # from gammapy.catalog import SourceCatalog3HWC, SourceCatalogGammaCat
 
@@ -21,6 +21,7 @@ from scipy.interpolate import splrep, splev
 from ..utils import ExclusionFinder
 
 from typing import Optional
+
 
 class BackgroundModelEstimator:
     """
@@ -50,8 +51,10 @@ class BackgroundModelEstimator:
             excluded_sources (list)             - list of sources to be excluded
                                                  (astropy.coordinates.Skycoords)
             njobs (int)                         - Number of jobs to run
-            default_exclusion (float)           - Default exclusion radius for sources. Defaults to None
-                                                 which will use the exclusion finder to determine the exclusion radius
+            default_exclusion (float)           - Default exclusion radius for sources.
+                                                 Defaults to None
+                                                 which will use the exclusion finder to determine
+                                                 the exclusion radius
 
         Returns
         ----------
@@ -92,7 +95,7 @@ class BackgroundModelEstimator:
         # )
         # self.hawc = SourceCatalog3HWC("$GAMMAPY_DATA/catalogs/3HWC.ecsv")
 
-        self.exclusion = ExclusionFinder(default_exclusion = default_exclusion)
+        self.exclusion = ExclusionFinder(default_exclusion=default_exclusion)
 
     @staticmethod
     def _make_bkg2d(energy: MapAxis, offset: MapAxis, unit: str) -> Background2D:
@@ -343,22 +346,28 @@ class BackgroundModelEstimator:
 
         return rate
 
+
 class Background3DModelEstimator:
-    
-    def __init__(self,
-        energy, 
-        fov_lon, 
+
+    def __init__(
+        self,
+        energy,
+        fov_lon,
         fov_lat,
         smooth: bool = False,
         excluded_sources: list = [],
-        smooth_sigma: float = 1,):
+        smooth_sigma: float = 1,
+        smooth_method: str = "gauss",
+    ):
 
         self.excluded_sources = excluded_sources
         self.smooth = smooth
         self.smooth_sigma = smooth_sigma
+        self.smooth_method = smooth_method
         self.counts = self._make_bkg3d(energy, fov_lon, fov_lat, unit="")
         self.exposure = self._make_bkg3d(energy, fov_lon, fov_lat, unit="s TeV sr")
         self.exclusion = ExclusionFinder()
+
     @staticmethod
     def _make_bkg3d(energy, fov_lon, fov_lat, unit):
         return Background3D(axes=[energy, fov_lon, fov_lat], unit=unit)
@@ -376,10 +385,15 @@ class Background3DModelEstimator:
         events = MapDatasetEventSampler.event_det_coords(obs, events)
         run_mask = self.exclusion.exclude_events(events.table, run_ra, run_dec)
         counts = np.histogramdd(
-            (events.energy.to('TeV')[run_mask], events.table['DETX'][run_mask], events.table['DETY'][run_mask]),
-            (energy.edges, fov_lon.edges, fov_lat.edges))[0]        
+            (
+                events.energy.to("TeV")[run_mask],
+                events.table["DETX"][run_mask],
+                events.table["DETY"][run_mask],
+            ),
+            (energy.edges, fov_lon.edges, fov_lat.edges),
+        )[0]
         self.counts.data += counts
-            
+
     def fill_exposure(self, obs):
         time = obs.observation_time_duration
         bin_volume = self.exposure.axes.bin_volume()
@@ -390,10 +404,11 @@ class Background3DModelEstimator:
         rate = deepcopy(self.counts)
         rate.quantity /= self.exposure.quantity
         if self.smooth:
-            rate = smooth(rate, sigma=self.smooth_sigma)
+            rate = smooth(rate, sigma=self.smooth_sigma, method=self.smooth_method)
         return rate
 
-def smooth(bkg, method='poly',sigma=1):
+
+def smooth(bkg, method="poly", sigma=1):
     """Smooths background rates from BackgroundModelEstimator.background_rate (bkg input)
 
 
@@ -401,7 +416,8 @@ def smooth(bkg, method='poly',sigma=1):
     ----------
         bkg (Background2D)                      - 2D background to be smoothed
         method (str)                            - Method for smoothing:
-                                                    "poly": 5th deg polynomial fit (same as ED) [default]
+                                                    "poly": 5th deg polynomial fit
+                                                            (same as ED) [default]
                                                     "spline": 10 d.o.f. cubic spline fit
                                                     "gauss": gaussian kernel smoothing
 
@@ -410,37 +426,44 @@ def smooth(bkg, method='poly',sigma=1):
         bkg (Background2D)                      - Smoothed 2D background
 
     """
-   
-    if method == 'poly':
-        offset = bkg.axes['offset'].center.value
+
+    if method == "poly":
+        offset = bkg.axes["offset"].center.value
         for i in range(len(bkg.data)):
-            poly = np.polyfit(offset,bkg.data[i,:],deg=5)
+            poly = np.polyfit(offset, bkg.data[i, :], deg=5)
             p = np.poly1d(poly)
-            bkg.data[i,:] = p(offset)
-    elif method == 'spline':
-        offset = bkg.axes['offset'].center.value
-        smooth_offset = np.linspace(offset[0],offset[-1],10)
+            bkg.data[i, :] = p(offset)
+    elif method == "spline":
+        offset = bkg.axes["offset"].center.value
+        smooth_offset = np.linspace(offset[0], offset[-1], 10)
         for i in range(len(bkg.data)):
-            spline = splrep(offset,bkg.data[i,:],deg=5)
-            fit = splev(smooth_offset,spline)
-            bkg.data[i,:] = fit(offset)
-    elif method == 'gauss':
-        if type(bkg) == gammapy.irf.background.Background2D:
+            spline = splrep(offset, bkg.data[i, :], deg=5)
+            fit = splev(smooth_offset, spline)
+            bkg.data[i, :] = fit(offset)
+    elif method == "gauss":
+        if isinstance(bkg, gammapy.irf.background.Background2D):
             bkg = bkg.to_3d()
-        else: bkg_3d = bkg
+        # SOB... Unused?
+        # else:
+        #     bkg_3d = bkg
         for i in range(len(bkg.data)):
             data = bkg.data[i, :, :]
-            padded_data = np.pad(data,10)
+            padded_data = np.pad(data, 10)
             window1d = np.abs(np.blackman(len(padded_data)))
-            window2d = np.sqrt(np.outer(window1d,window1d))
+            window2d = np.sqrt(np.outer(window1d, window1d))
             windowed = padded_data * window2d
-            gauss = Gaussian2DKernel(sigma,sigma,x_size=np.shape(windowed)[0],y_size=np.shape(windowed)[1])
+            gauss = Gaussian2DKernel(
+                sigma, sigma, x_size=np.shape(windowed)[0], y_size=np.shape(windowed)[1]
+            )
 
-            conv = convolve_fft(data,gauss,normalize_kernel=False,fft_pad=True,preserve_nan=True)
+            conv = convolve_fft(
+                data, gauss, normalize_kernel=False, fft_pad=True, preserve_nan=True
+            )
             bkg.data[i, :, :] = conv
 
-        if type(bkg) == gammapy.irf.background.Background2D:
+        if isinstance(bkg, gammapy.irf.background.Background2D):
             return bkg.to_2d()
-        else: return bkg
+        else:
+            return bkg
 
     return bkg

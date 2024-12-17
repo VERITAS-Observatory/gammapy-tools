@@ -10,13 +10,13 @@ Stage: build
     # Temporay build files
     ../gammapy-tools /gamma-tools/tmp_build/gammapy-tools
 
-    ./gammapy_tools/Hipparcos_MAG8_1997.dat /gamma-tools/gammapy-datasets/1.1/catalogs/Hipparcos_MAG8_1997.dat
+    ./gammapy_tools/Hipparcos_MAG8_1997.dat /gamma-tools/gammapy-datasets/1.3/catalogs/Hipparcos_MAG8_1997.dat
 
 %environment
     # Port for jupyter lab
     export JPORT=8000
-    export GAMMAPY_DATA=/gamma-tools/gammapy-datasets/1.2/
-    export GAMMAPY_DATA=/gamma-tools/gammapy-datasets/dev
+    export GAMMAPY_DATA=/gamma-tools/gammapy-datasets/1.3/
+    #export GAMMAPY_DATA=/gamma-tools/gammapy-datasets/dev
     #. "/opt/conda/etc/profile.d/conda.sh"
     #. /opt/conda/bin/activate 
     #export PATH=/opt/conda/bin/:$PATH
@@ -36,18 +36,18 @@ Stage: build
 
     python3 -m venv /opt/gammapy_tools
     . /opt/gammapy_tools/bin/activate
-    pip install iminuit cmasher pip papermill matplotlib uproot "jupyterlab==4.0.12"  notebook ipykernel ipython ipywidgets
+    pip install iminuit cmasher pip papermill matplotlib uproot "jupyterlab==4.0.12"  notebook ipykernel ipython ipywidgets astropy
     #mamba install -c conda-forge iminuit cmasher pip papermill matplotlib pip "jupyterlab==4.0.12"  notebook ipykernel ipython ipywidgets --yes 
     
     
     # Install v2dl3
     cd /gamma-tools
-    git clone https://github.com/VERITAS-Observatory/V2DL3.git
+    git clone  --depth 1 --branch v0.6.0 https://github.com/VERITAS-Observatory/V2DL3.git
     cd /gamma-tools/V2DL3
 
     # Because its an env install of requirements
     # Note the python version in the latest test throws issues with pytest
-    grep -A 100 "dependencies:" environment-eventdisplay.yml | grep "-" | grep -v "python" | awk '{print $2}' | xargs pip install
+    grep -A 100 "dependencies:" environment-eventdisplay.yml | grep "-" | grep -v "python" | grep -v "astropy-base" | awk '{print $2}' | xargs pip install
 
     # root_numpy throws issues too. Only VEGAS uses it
     mv setup.py _setup.py && grep -v "root_numpy" _setup.py > setup.py && pip install .
@@ -69,8 +69,8 @@ Stage: build
     python -m pip cache purge
 
 
-    # Add the updated version of gammapy/datasets/map.py
-    wget https://raw.githubusercontent.com/gammapy/gammapy/main/gammapy/datasets/map.py -O /opt/gammapy_tools/lib/python3.12/site-packages/gammapy/datasets/map.py
+    # # Add the updated version of gammapy/datasets/map.py
+    # wget https://raw.githubusercontent.com/gammapy/gammapy/main/gammapy/datasets/map.py -O /opt/gammapy_tools/lib/python3.12/site-packages/gammapy/datasets/map.py
 
 %runscript
     cd /local_data ; jupyter-lab --port=$JPORT

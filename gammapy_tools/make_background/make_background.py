@@ -18,7 +18,7 @@ from gammapy.maps import MapAxis
 from pyV2DL3.generateObsHduIndex import create_obs_hdu_index_file
 
 # From here
-from .background_models import BackgroundModelEstimator,Background3DModelEstimator
+from .background_models import BackgroundModelEstimator, Background3DModelEstimator
 from .background_tools import process_run, get_requested_exposure
 from ..utils.run_details import find_data_mimic
 
@@ -132,32 +132,46 @@ def get_background_for_run(parms: tuple[float, dict]) -> tuple[str, list]:
         if "smooth_sigma" in config["background_selection"]:
             smooth_sigma = config["background_selection"]["smooth_sigma"]
 
-        default_exclusion = None 
+        default_exclusion = None
         if "sky_map" in config:
             if "on_exclusion_region" in config["sky_map"]:
                 default_exclusion = config["sky_map"]["on_exclusion_region"]
-        
 
-        
         if make_3d:
             fov_lon = MapAxis.from_bounds(
-                -config["binning"]["off_max"], config["binning"]["off_max"], nbin=config["binning"]["off_bins"], interp="lin", unit="deg",name="fov_lon"
+                -config["binning"]["off_max"],
+                config["binning"]["off_max"],
+                nbin=config["binning"]["off_bins"],
+                interp="lin",
+                unit="deg",
+                name="fov_lon",
             )
-            fov_lat =MapAxis.from_bounds(
-                -config["binning"]["off_max"], config["binning"]["off_max"], nbin=config["binning"]["off_bins"], interp="lin", unit="deg",name="fov_lat"
+            fov_lat = MapAxis.from_bounds(
+                -config["binning"]["off_max"],
+                config["binning"]["off_max"],
+                nbin=config["binning"]["off_bins"],
+                interp="lin",
+                unit="deg",
+                name="fov_lat",
             )
-            if default_exclusion != None:
+            if default_exclusion is not None:
+                smooth_method = (
+                    "gauss"
+                    if "smooth_method" not in config["background_selection"]
+                    else config["background_selection"]["smooth_method"]
+                )
                 estimator = Background3DModelEstimator(
                     energy,
                     fov_lon,
                     fov_lat,
                     smooth=config["background_selection"]["smooth"],
                     smooth_sigma=smooth_sigma,
+                    smooth_method=smooth_method,
                 )
             else:
-                raise Exception("3D Exclusions not implemented") 
+                raise Exception("3D Exclusions not implemented")
         else:
-            if default_exclusion != None:
+            if default_exclusion is not None:
                 estimator = BackgroundModelEstimator(
                     energy,
                     offset,
@@ -165,7 +179,7 @@ def get_background_for_run(parms: tuple[float, dict]) -> tuple[str, list]:
                     smooth_sigma=smooth_sigma,
                     njobs=config["config"]["njobs"],
                     default_exclusion=default_exclusion,
-                    )
+                )
             else:
                 estimator = BackgroundModelEstimator(
                     energy,
@@ -173,7 +187,7 @@ def get_background_for_run(parms: tuple[float, dict]) -> tuple[str, list]:
                     smooth=config["background_selection"]["smooth"],
                     smooth_sigma=smooth_sigma,
                     njobs=config["config"]["njobs"],
-                    )
+                )
 
         estimator.run(observations)
         # Check if a background currently exists
@@ -249,14 +263,14 @@ def generate_background_from_run(parms: tuple[int, dict]) -> str:
             name="offset",
         )
 
-        default_exclusion = None 
+        default_exclusion = None
         if "sky_map" in config:
             if "on_exclusion_region" in config["sky_map"]:
                 default_exclusion = config["sky_map"]["on_exclusion_region"]
 
-        
         estimator = BackgroundModelEstimator(
-            energy, offset, 
+            energy,
+            offset,
             smooth=config["background_selection"]["smooth"],
             default_exclusion=default_exclusion,
         )

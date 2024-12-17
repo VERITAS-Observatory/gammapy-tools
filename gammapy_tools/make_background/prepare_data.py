@@ -54,6 +54,7 @@ def prepare_dataset(config: dict, overwrite: bool = False) -> dict:
     try:
         data_store.copy_obs(obs_in_db, in_dir, overwrite=overwrite)
     except Exception as e:
+        print(e)
         if len(obs_in_db) == 0:
             raise RuntimeError(
                 f"Observations cannot be found in {db_dir}, do these files exist?"
