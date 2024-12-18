@@ -10,7 +10,7 @@
 **/.classpath
 **/.dockerignore
 **/.env
-# **/.git
+#**/.git
 **/.gitignore
 **/.project
 **/.settings
@@ -32,4 +32,13 @@
 **/values.dev.yaml
 LICENSE
 README.md
-*.sif
+
+
+# Some more specfic things
+**/.github
+**/.ruff_cache
+**/*.def
+**/*.sif
+**/*.egg-info
+build
+examples
