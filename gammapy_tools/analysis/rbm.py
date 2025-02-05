@@ -88,12 +88,13 @@ def rbm_analysis(
     Returns
     ----------
         counts: total counts
-        excess: excess counts
         background: off counts
         alpha: relative size of the on/off regions & exposure times
         sigma: significance at the source location (defined in the config file)
         excess_map: map of excess counts
+        exposure: time on source
         significance_map: significance map
+        exclusion_mask: exclusion mask
     """
     if not os.path.exists(config["io"]["results_dir"]):
         os.makedirs(config["io"]["results_dir"])
