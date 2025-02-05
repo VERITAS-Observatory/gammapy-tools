@@ -77,7 +77,7 @@ log = logging.getLogger(__name__)
 
 def rbm_analysis(
     config: dict,
-) -> Tuple[float, float, float, float, np.ndarray, float, np.ndarray, np.ndarray]:
+) -> Tuple[float, float, float, float, np.ndarray, float, np.ndarray, np.ndarray, np.ndarray]:
     """
     Performs a basic RBM analysis
 
@@ -95,6 +95,7 @@ def rbm_analysis(
         exposure: time on source
         significance_map: significance map
         exclusion_mask: exclusion mask
+        alpha_map: alpha map
     """
     if not os.path.exists(config["io"]["results_dir"]):
         os.makedirs(config["io"]["results_dir"])
@@ -235,6 +236,7 @@ def rbm_analysis(
     lima_maps = estimator.run(dataset_on_off)
     significance_map = lima_maps["sqrt_ts"]
     excess_map = lima_maps["npred_excess"]
+    alpha_map = lima_maps["alpha"]
 
     counts = lima_maps["npred"].get_by_coord(
         [source_pos.ra, source_pos.dec, 1 * u.TeV]
@@ -245,7 +247,7 @@ def rbm_analysis(
     sigma = lima_maps["sqrt_ts"].get_by_coord(
         [source_pos.ra, source_pos.dec, 1 * u.TeV]
     )[0]
-    alpha = lima_maps["alpha"].get_by_coord(
+    alpha = alpha_map.get_by_coord(
         [source_pos.ra, source_pos.dec, 1 * u.TeV]
     )[0]
     exposure = output_dict["ontime"]
@@ -259,6 +261,7 @@ def rbm_analysis(
         exposure,
         significance_map,
         exclusion_mask,
+        alpha_map,
     )
 
 
@@ -268,6 +271,7 @@ def rbm_plots(
     excess_map: WcsNDMap,
     significance_map: WcsNDMap,
     exclusion_mask: WcsNDMap,
+    alpha_map: WcsNDMap,
     save: Optional[bool] = True,
     plot: Optional[bool] = True,
     spectrum: Optional[bool] = True,
@@ -281,15 +285,14 @@ def rbm_plots(
         spectral_points: spectral points
         excess map: excess counts map
         significance map: Li&Ma significance map
-        exclusion mask: Exclusion mask of regions to be excluded
-        c_sig: cumulative significance
-        c_time: cumulative time
-        save: if true, saves plots with prefix defined in config['plot_names']
+        exclusion mask: exclusion mask of regions to be excluded
+        alpha_map: map of Li&Ma alpha values
+        save: if True, saves plots with prefix defined in config['plot_names']
     """
 
     # significance & excess plots
-    fig, (ax1, ax2) = plt.subplots(
-        figsize=(13, 5), subplot_kw={"projection": significance_map.geom.wcs}, ncols=2
+    fig, (ax1, ax2, ax3) = plt.subplots(
+        figsize=(18, 5), subplot_kw={"projection": significance_map.geom.wcs}, ncols=3
     )
     cmap=sns.color_palette("magma", as_cmap=True)
     ax1.set_title("Significance map")
@@ -300,8 +303,12 @@ def rbm_plots(
 
     ax2.set_title("Excess map")
     excess_map.plot(ax=ax2, add_cbar=True,cmap=cmap)
+
+    ax3.set_title("Alpha map")
+    alpha_map.plot(ax=ax3, add_cbar=True, cmap=cmap)
+    
     plt.savefig(
-        config["plot_names"] + "sig_excess.png", format="png", bbox_inches="tight"
+        config["plot_names"] + "sig_excess_alpha.png", format="png", bbox_inches="tight"
     )
     plt.show()
 
