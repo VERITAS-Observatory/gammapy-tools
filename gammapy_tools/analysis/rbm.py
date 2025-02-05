@@ -37,39 +37,42 @@ __notebook_version__ = "0.3"
 log = logging.getLogger(__name__)
 
 
-def estimate_alpha(S: float, N_on: float, N_off: float) -> float:
-    """
-    Numerically estimates alpha from significance, ON counts, and OFF counts
-
-    Parameters
-    ----------
-        S: significance
-        N_on: on counts
-        N_off: off counts*alpha
-
-    Returns
-    ----------
-        alpha: estimated alpha
-    """
-
-    # Define the function to find the root of
-    def equation(alpha):
-        return (
-            np.sqrt(2)
-            * np.sqrt(
-                N_on * np.log((1 + alpha) / alpha * (N_on / (N_on + (N_off / alpha))))
-                + (N_off / alpha)
-                * np.log((1 + alpha) * ((N_off / alpha) / (N_on + (N_off / alpha))))
-            )
-            - S
-        )
-
-    # Initial guess for alpha
-    alpha_initial_guess = 1e-2
-
-    # Solve for alpha
-    alpha_solution = fsolve(equation, alpha_initial_guess)
-    return alpha_solution[0]
+# No longer needed:
+#
+# def estimate_alpha(S: float, N_on: float, N_off: float) -> float:
+#     """
+#     Numerically estimates alpha from significance, ON counts, and OFF counts
+# 
+#     Parameters
+#     ----------
+#         S: significance
+#         N_on: on counts
+#         N_off: off counts*alpha
+# 
+#     Returns
+#     ----------
+#         alpha: estimated alpha
+#     """
+# 
+#     # Define the function to find the root of
+#     def equation(alpha):
+#         # This is Li & Ma equation 17
+#         return (
+#             np.sqrt(2)
+#             * np.sqrt(
+#                 N_on * np.log((1 + alpha) / alpha * (N_on / (N_on + (N_off / alpha))))
+#                 + (N_off / alpha)
+#                 * np.log((1 + alpha) * ((N_off / alpha) / (N_on + (N_off / alpha))))
+#             )
+#             - S
+#         )
+# 
+#     # Initial guess for alpha
+#    alpha_initial_guess = 1e-2
+# 
+#     # Solve for alpha
+#     alpha_solution = fsolve(equation, alpha_initial_guess)
+#     return alpha_solution[0]
 
 
 def rbm_analysis(
@@ -224,7 +227,7 @@ def rbm_analysis(
 
     estimator = ExcessMapEstimator(
         config["sky_map"]["theta"] * u.deg,
-        selection_optional=[],
+        selection_optional=["alpha"],
         # spectral_model=spectral_model,
         correlate_off=False,
     )
@@ -241,7 +244,9 @@ def rbm_analysis(
     sigma = lima_maps["sqrt_ts"].get_by_coord(
         [source_pos.ra, source_pos.dec, 1 * u.TeV]
     )[0]
-    alpha = estimate_alpha(sigma, counts, background)
+    alpha = lima_maps["alpha"].get_by_coord(
+        [source_pos.ra, source_pos.dec, 1 * u.TeV]
+    )[0]
     exposure = output_dict["ontime"]
     
     return (
