@@ -6,7 +6,7 @@ import os
 from astropy.io import fits
 from os import environ
 from astropy.table import Table
-from scipy.optimize import fsolve
+# from scipy.optimize import fsolve
 from typing import Optional, Tuple
 from tqdm.auto import tqdm
 
