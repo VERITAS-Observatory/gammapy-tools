@@ -287,7 +287,9 @@ def rbm_plots(
         significance map: Li&Ma significance map
         exclusion mask: exclusion mask of regions to be excluded
         alpha_map: map of Li&Ma alpha values
-        save: if True, saves plots with prefix defined in config['plot_names']
+        save: if True, save plots with prefix defined in config['plot_names']
+        plot: if True, display plots
+        spectrum: if True, include spectrum plot
     """
 
     # significance & excess plots
