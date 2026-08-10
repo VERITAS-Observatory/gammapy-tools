@@ -1,4 +1,16 @@
 # gammapy-tools
+
+> **⚠️ Archived / Deprecated**
+> This repository is no longer maintained. It has been superseded by
+> [DL3_backgrounds_LUT](https://github.com/VERITAS-Observatory/DL3_backgrounds_LUT),
+> specifically the
+> [`make_bkg_lut.ipynb`](https://github.com/VERITAS-Observatory/DL3_backgrounds_LUT/blob/main/make_bkg_lut.ipynb)
+> workflow, which replaces this series of scripts for gammapy background generation.
+>
+> This repo is being kept as a reference for historical purposes.
+> Please use the linked repository for current work.
+>
+
 A repo for tools related to gammapy background generation.
 This is the public version of [gammapy-background-analysis](https://github.com/VERITAS-Observatory/gammapy-background-analysis.git).
 
